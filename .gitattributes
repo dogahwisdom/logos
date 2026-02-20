@@ -1,0 +1,5 @@
+# Ensure GitHub Linguist counts all languages in repo stats
+*.sql   linguist-language=SQL
+*.html  linguist-language=HTML
+*.json  linguist-language=JSON
+*.md    linguist-language=Markdown
