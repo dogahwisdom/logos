@@ -1,9 +1,5 @@
-# GitHub Linguist: force all used languages to be counted and shown in the bar
-*.sql   linguist-language=SQL linguist-detectable=true
-*.html  linguist-language=HTML linguist-detectable=true
-*.md    linguist-language=Markdown linguist-detectable=true
+# Line endings: normalize to LF on commit
+* text=auto
 
-# JSON: count config files, exclude large generated lockfile
-package.json    linguist-language=JSON linguist-detectable=true
-tsconfig.json   linguist-language=JSON linguist-detectable=true
+# Generated file: exclude from GitHub language stats
 package-lock.json linguist-generated=true
