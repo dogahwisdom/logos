@@ -1,0 +1,290 @@
+import React, { useState, useEffect } from 'react';
+import { User } from '../types';
+import toast from 'react-hot-toast';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { apiBase } from '../config/env';
+
+interface AuthScreenProps {
+  onLogin: (user: User) => void;
+  theme?: 'dark' | 'light';
+}
+
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isDark = theme === 'dark';
+
+  // Custom Google OAuth (server callback) only when Supabase is not configured
+  useEffect(() => {
+    if (isSupabaseConfigured()) return;
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS' && event.data.user) {
+        const googleUser = event.data.user;
+        const user: User = {
+          username: googleUser.name,
+          email: googleUser.email
+        };
+        toast.success("Signed in with Google successfully.");
+        onLogin(user);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onLogin]);
+
+  const handleGoogleLogin = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin }
+        });
+        if (error) throw error;
+        toast.success("Redirecting to Google…");
+      } catch (err: unknown) {
+        console.error('Google Auth Error:', err);
+        toast.error(err instanceof Error ? err.message : "Failed to sign in with Google");
+      }
+      return;
+    }
+    try {
+      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      const response = await fetch(`${apiBase}/api/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to get auth URL');
+      }
+      const { url } = await response.json();
+      const width = 500;
+      const height = 600;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      window.open(url, 'google_oauth_popup', `width=${width},height=${height},left=${left},top=${top}`);
+    } catch (error: unknown) {
+      console.error('Google Auth Error:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to initiate Google Sign-In");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || (!isLogin && !username)) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // Sign In
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          const user: User = {
+            id: data.user.id,
+            username: data.user.user_metadata?.username || email.split('@')[0],
+            email: data.user.email || email
+          };
+          toast.success("Welcome back to LOGOS.");
+          onLogin(user);
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username }
+          }
+        });
+        if (error) throw error;
+        if (data.user) {
+          const user: User = {
+            id: data.user.id,
+            username,
+            email
+          };
+          toast.success("Account created successfully.");
+          onLogin(user);
+        }
+      }
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      
+      // Check for "Failed to fetch" (Network Error) which happens with placeholder URL
+      // OR specific Supabase configuration errors
+      if (
+        error.message === "Failed to fetch" || 
+        error.message?.includes("Supabase URL") || 
+        error.message?.includes("apikey")
+      ) {
+         console.warn("Supabase not reachable (likely placeholder), falling back to mock auth.");
+         
+         // Simulate network delay for realism
+         setTimeout(() => {
+            const user: User = {
+              username: isLogin ? email.split('@')[0] : username,
+              email: email
+            };
+            toast.success(isLogin ? "Welcome back (Demo Mode)." : "Account created (Demo Mode).");
+            onLogin(user);
+         }, 800);
+      } else {
+        toast.error(error.message || "Authentication failed");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={`flex items-center justify-center min-h-screen transition-colors duration-300 ${
+      isDark ? 'bg-zinc-950 text-zinc-200' : 'bg-zinc-50 text-zinc-900'
+    }`}>
+      <div className={`w-full max-w-md p-8 space-y-8 border rounded-xl shadow-2xl transition-all ${
+        isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+      }`}>
+        <div className="text-center">
+          <h1 className={`text-4xl font-bold tracking-tight mb-2 ${
+            isDark ? 'text-white' : 'text-zinc-900'
+          }`}>
+            LOGOS
+          </h1>
+          <p className="text-sm text-zinc-500">Scientific Discovery Agent</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {!isLogin && (
+            <div>
+              <label className={`block text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-700'}`}>Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors ${
+                  isDark 
+                    ? 'bg-zinc-950 border-zinc-700 text-white placeholder-zinc-600' 
+                    : 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400'
+                }`}
+                placeholder="Dr. Researcher"
+              />
+            </div>
+          )}
+          
+          <div>
+            <label className={`block text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-700'}`}>Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors ${
+                  isDark 
+                    ? 'bg-zinc-950 border-zinc-700 text-white placeholder-zinc-600' 
+                    : 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400'
+                }`}
+              placeholder="name@institute.edu"
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-700'}`}>Password</label>
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors pr-10 ${
+                    isDark 
+                      ? 'bg-zinc-950 border-zinc-700 text-white placeholder-zinc-600' 
+                      : 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400'
+                  }`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className={`absolute inset-y-0 right-0 px-3 flex items-center text-sm focus:outline-none ${
+                  isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'
+                }`}
+              >
+                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+          </button>
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className={`w-full border-t ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className={`px-2 ${isDark ? 'bg-zinc-900 text-zinc-500' : 'bg-white text-zinc-500'}`}>
+              Or continue with
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className={`w-full flex justify-center items-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium transition-colors ${
+            isDark 
+              ? 'bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700' 
+              : 'bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50'
+          }`}
+        >
+          <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+          Google
+        </button>
+
+        <div className="text-center text-sm">
+          <span className="text-zinc-500">
+            {isLogin ? "Don't have an account? " : "Already have an account? "}
+          </span>
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="font-medium text-orange-600 hover:text-orange-500"
+          >
+            {isLogin ? 'Sign up' : 'Log in'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
