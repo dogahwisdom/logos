@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AuthScreen } from './components/AuthScreen';
+import { SetNewPasswordForm } from './components/SetNewPasswordForm';
 import { Sidebar } from './components/Sidebar';
 import { Workbench } from './components/Workbench';
 import { SettingsModal } from './components/SettingsModal';
@@ -21,6 +22,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [authReady, setAuthReady] = useState(false);
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
   const [settings, setSettings] = useState<AppSettings>({
     temperature: 0.7,
     theme: 'dark',
@@ -87,7 +89,11 @@ export default function App() {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setPasswordRecoveryMode(true);
+          return;
+        }
         if (session) {
           const me = await getMeFromSupabase();
           if (me) {
@@ -199,6 +205,23 @@ export default function App() {
       </div>
     );
   }
+  if (passwordRecoveryMode && isSupabaseConfigured()) {
+    return (
+      <SetNewPasswordForm
+        theme={settings.theme}
+        onSuccess={async () => {
+          setPasswordRecoveryMode(false);
+          const me = await getMeFromSupabase();
+          if (me) {
+            setUser({ id: me.id, email: me.email, username: me.username });
+            const list = await fetchSessionsFromSupabase();
+            setSessions(list);
+          }
+        }}
+      />
+    );
+  }
+
   if (!user) {
     return <AuthScreen onLogin={handleLogin} theme={settings.theme} />;
   }

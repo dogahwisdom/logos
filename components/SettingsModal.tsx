@@ -106,7 +106,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className={`block text-sm font-medium mb-3 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
                 Reasoning Engine
             </label>
-
+            <p className={`text-xs mb-3 ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+              Use any inference API you prefer. Your endpoint must allow requests from this site (CORS).
+            </p>
             <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>

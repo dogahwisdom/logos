@@ -16,6 +16,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -69,6 +70,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
     } catch (error: unknown) {
       console.error('Google Auth Error:', error);
       toast.error(error instanceof Error ? error.message : "Failed to initiate Google Sign-In");
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin
+      });
+      if (error) throw error;
+      toast.success('Check your email for a link to reset your password.');
+      setShowForgotPassword(false);
+    } catch (err: unknown) {
+      console.error('Reset password error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to send reset link.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,6 +187,43 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           <p className="text-sm text-zinc-500">Scientific Discovery Agent</p>
         </div>
 
+        {showForgotPassword && isSupabaseConfigured() ? (
+          <>
+            <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              Enter your email and we’ll send you a link to reset your password.
+            </p>
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-zinc-700'}`}>Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    isDark ? 'bg-zinc-950 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+                  }`}
+                  placeholder="name@institute.edu"
+                  autoComplete="email"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full min-h-[44px] py-3 px-4 rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {loading ? 'Sending…' : 'Send reset link'}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(false)}
+              className={`w-full text-sm font-medium ${isDark ? 'text-zinc-400 hover:text-white' : 'text-zinc-600 hover:text-zinc-900'}`}
+            >
+              Back to sign in
+            </button>
+          </>
+        ) : (
+        <>
         <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
             <div>
@@ -230,6 +290,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           >
             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
+          {isLogin && isSupabaseConfigured() && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm font-medium text-orange-600 hover:text-orange-500"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
         </form>
 
         <div className="relative">
@@ -284,6 +355,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             {isLogin ? 'Sign up' : 'Log in'}
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
