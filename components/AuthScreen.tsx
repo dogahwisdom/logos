@@ -149,10 +149,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
   };
 
   return (
-    <div className={`flex items-center justify-center min-h-screen transition-colors duration-300 ${
+    <div className={`flex items-center justify-center min-h-screen p-4 sm:p-6 transition-colors duration-300 ${
       isDark ? 'bg-zinc-950 text-zinc-200' : 'bg-zinc-50 text-zinc-900'
     }`}>
-      <div className={`w-full max-w-md p-8 space-y-8 border rounded-xl shadow-2xl transition-all ${
+      <div className={`w-full max-w-md p-6 sm:p-8 space-y-6 sm:space-y-8 border rounded-xl shadow-2xl transition-all ${
         isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
       }`}>
         <div className="text-center">
@@ -226,7 +226,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`w-full flex justify-center min-h-[44px] py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>
@@ -246,7 +246,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className={`w-full flex justify-center items-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium transition-colors ${
+          className={`w-full flex justify-center items-center min-h-[44px] py-3 px-4 border rounded-md shadow-sm text-sm font-medium transition-colors ${
             isDark 
               ? 'bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700' 
               : 'bg-white border-zinc-300 text-zinc-700 hover:bg-zinc-50'

@@ -213,6 +213,14 @@ export default function App() {
         }
       }}/>
       
+      {/* Mobile sidebar backdrop: tap outside to close */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          aria-hidden="true"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
       <Sidebar 
         user={user} 
         sessions={sessions} 
@@ -226,6 +234,18 @@ export default function App() {
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
+      {/* Mobile: open sidebar when it's closed */}
+      <button
+        type="button"
+        className={`fixed z-20 flex items-center justify-center w-11 h-11 rounded-lg border shadow-md md:hidden transition-colors ${
+          isSidebarOpen ? 'invisible' : 'visible ' + (settings.theme === 'dark' ? 'bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-800 hover:bg-zinc-50')
+        }`}
+        style={{ top: 'max(1rem, env(safe-area-inset-top))', left: 'max(1rem, env(safe-area-inset-left))' }}
+        onClick={() => setIsSidebarOpen(true)}
+        aria-label="Open menu"
+      >
+        <i className="fas fa-bars text-lg" aria-hidden />
+      </button>
 
       <SettingsModal 
         isOpen={isSettingsOpen}

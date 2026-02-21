@@ -44,27 +44,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className={`w-full max-w-md border rounded-xl shadow-2xl overflow-hidden transition-colors ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
+      <div className={`w-full max-w-md max-h-[90vh] flex flex-col border rounded-xl shadow-2xl overflow-hidden transition-colors ${
         isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
       }`}>
         {/* Header */}
-        <div className={`px-6 py-4 border-b flex justify-between items-center ${
+        <div className={`px-4 sm:px-6 py-4 border-b flex justify-between items-center flex-shrink-0 ${
           isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
         }`}>
           <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-zinc-900'}`}>Global Settings</h2>
           <button 
+            type="button"
             onClick={onClose}
-            className={`transition-colors ${
+            className={`min-h-[44px] min-w-[44px] flex items-center justify-center -m-2 transition-colors ${
               isDark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-900'
             }`}
+            aria-label="Close settings"
           >
             <i className="fas fa-times"></i>
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-8">
+        <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 overflow-y-auto flex-1 min-h-0">
           
           {/* Theme Control */}
           <div>
@@ -107,7 +109,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                 <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                  Use your own OpenAI-compatible API. It must allow CORS from this site.
+                  Connect an inference endpoint that implements the OpenAI Chat Completions API (e.g. OpenAI, Azure OpenAI, or self-hosted). Your endpoint must allow cross-origin requests from this origin.
                 </p>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>

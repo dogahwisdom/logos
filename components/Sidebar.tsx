@@ -47,9 +47,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   return (
-    <aside className={`${isOpen ? 'w-64' : 'w-20'} border-r flex flex-col h-full flex-shrink-0 transition-all duration-300 overflow-hidden relative ${
-      isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-    }`}>
+    <>
+    <aside className={`fixed md:relative inset-y-0 left-0 z-40 border-r flex flex-col h-full flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${
+      isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20'
+    } ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
       <div className={`${isOpen ? 'w-64' : 'w-20'} h-full flex flex-col transition-all duration-300`}>
         {/* Header */}
         <div className={`p-6 border-b flex items-center ${isOpen ? 'justify-between' : 'justify-center flex-col gap-4'} ${
@@ -264,5 +265,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
       </div>
     </aside>
+    </>
   );
 };
