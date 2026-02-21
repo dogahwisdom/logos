@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AnalysisSession, AnalysisResult, AppState, AppSettings } from '../types';
 import { extractTextFromPdf } from '../services/pdfService';
 import { analyzePaperWithCustomAI } from '../services/customAiService';
+import { analyzePaperViaSupabase } from '../services/analyzePaperSupabase';
+import { isSupabaseConfigured } from '../services/supabase';
 import type { AnalysisResult } from '../types';
 import { apiBase } from '../config/env';
 import { MOCK_LOADING_STEPS } from '../constants';
@@ -87,6 +89,8 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
 
       if (settings.modelProvider === 'custom' && settings.customModelConfig?.baseUrl) {
         result = await analyzePaperWithCustomAI(text, settings.customModelConfig, settings.temperature);
+      } else if (isSupabaseConfigured()) {
+        result = await analyzePaperViaSupabase(text, settings.temperature);
       } else {
         const resp = await fetch(`${apiBase}/api/analyze`, {
           method: 'POST',

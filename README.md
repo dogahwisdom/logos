@@ -16,9 +16,8 @@ Research assistant for analyzing papers, identifying methodological gaps, and pr
 | Layer      | Stack |
 |-----------|--------|
 | Frontend  | React 19, Vite, TypeScript, Tailwind CSS |
-| Backend   | Express (Node.js) |
-| AI        | Google Gemini API or custom endpoint |
-| Auth/Data | Supabase (optional) |
+| API       | Supabase Edge Functions (Gemini) or Express (local) |
+| Auth/Data | Supabase |
 
 ## Prerequisites
 
@@ -47,18 +46,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes* | Google AI API key (server-side). Required for analysis. |
-| `VITE_SUPABASE_URL` | No | Supabase project URL (client) |
-| `VITE_SUPABASE_ANON_KEY` | No | Supabase anon key (client) |
-| `SUPABASE_URL` | No | Same as `VITE_SUPABASE_URL` (server) |
-| `SUPABASE_SERVICE_ROLE_KEY` | No | Supabase service role key (server) |
-| `ALLOWED_CUSTOM_AI_BASE_URLS` | No | Comma-separated URLs for custom AI proxy |
-| `APP_ORIGIN` | No | App origin for OAuth (e.g. `https://app.example.com`) |
-| `VITE_API_URL` | No | API base URL in production when frontend and API differ (e.g. Netlify + Render) |
+| `VITE_SUPABASE_URL` | Yes* | Supabase project URL (client) |
+| `VITE_SUPABASE_ANON_KEY` | Yes* | Supabase anon key (client) |
+| `GEMINI_API_KEY` | Yes** | For local dev (Express) or set in Supabase Edge Function secrets for production |
+| `SUPABASE_URL` | No | Same as `VITE_SUPABASE_URL` (only for local Express server) |
+| `SUPABASE_SERVICE_ROLE_KEY` | No | Only for local Express server |
+| `ALLOWED_CUSTOM_AI_BASE_URLS` | No | Only for local Express proxy (optional) |
+| `APP_ORIGIN` | No | App origin for OAuth |
+| `VITE_API_URL` | No | Only if you run the Express API on a separate host |
 
-\* Without Supabase, only `GEMINI_API_KEY` is required; sessions use local storage.
-
-**Supabase:** To enable auth and cloud session storage, set all four Supabase variables and run `supabase/migrations/001_initial.sql` in the Supabase SQL Editor. For Google sign-in, configure the Google provider and redirect URLs in the Supabase dashboard.
+\* For production (Netlify + Supabase), only the two `VITE_*` Supabase vars are needed on the frontend.  
+\** For **paper analysis**: set `GEMINI_API_KEY` in **Supabase** → Project Settings → Edge Functions → Secrets (see [Deployment](#deployment)).
 
 ## Scripts
 
@@ -71,25 +69,28 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deployment
 
-### Netlify (frontend)
+With **Supabase**, you only deploy the frontend (Netlify) and the Edge Function (Supabase). No separate Node server (e.g. Render) is required.
 
-1. Connect the repo to Netlify.
-2. Build settings:
-   - **Build command:** `npm run build`
-   - **Publish directory:** `dist`
-3. In **Site settings → Environment variables**, set all `VITE_*` and any other vars the build needs (e.g. `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-4. If the API runs elsewhere (e.g. Render), set `VITE_API_URL` to that API base URL (e.g. `https://your-api.onrender.com`).
+### 1. Supabase: database and Edge Function
 
-The frontend will call the API at `VITE_API_URL` when set; leave it unset only if the same server serves both the app and the API.
+1. **Database:** In Supabase → **SQL Editor**, run the contents of `supabase/migrations/001_initial.sql`.
+2. **Edge Function (paper analysis):** Deploy the function and set the Gemini key:
+   - Install [Supabase CLI](https://supabase.com/docs/guides/cli) and run `supabase login`.
+   - Link the project: `supabase link --project-ref YOUR_REF` (ref = e.g. `ubnvmkyevlnqildjooav` from your project URL).
+   - Deploy: `supabase functions deploy analyze-paper`.
+   - In **Supabase Dashboard** → **Project Settings** → **Edge Functions** → **Secrets**, add:
+     - **Name:** `GEMINI_API_KEY`  
+     - **Value:** your Google AI (Gemini) API key
+3. **Auth (optional):** For Google sign-in, enable the Google provider and set redirect URLs under **Authentication** → **URL Configuration**.
 
-### Backend (API)
+### 2. Netlify (frontend)
 
-The Express server in `server.ts` must run on a Node host (e.g. [Render](https://render.com), [Railway](https://railway.app)). Deploy the repo, set the same env vars (except `VITE_*`), and use:
-
-- **Start command:** `npm run build && npm run start`  
-  or `npx tsx server.ts` if the host runs TypeScript.
-
-Point Netlify’s `VITE_API_URL` to this backend URL so the frontend uses the production API.
+1. **Add site:** [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an existing project** → **GitHub** → choose **logos**.
+2. **Build:** Netlify uses `netlify.toml` (build: `npm run build`, publish: `dist`).
+3. **Environment variables:** In **Site settings** → **Environment variables**, add:
+   - `VITE_SUPABASE_URL` = your Supabase project URL (e.g. `https://xxx.supabase.co`)
+   - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
+4. **Deploy.** The app will use Supabase for auth, sessions, and paper analysis (Edge Function). No `VITE_API_URL` or separate backend needed.
 
 ## Project structure
 
@@ -97,9 +98,9 @@ Point Netlify’s `VITE_API_URL` to this backend URL so the frontend uses the pr
 ├── components/     React UI components
 ├── config/         Client env (e.g. API base URL)
 ├── services/       API clients (Gemini, Supabase, PDF, custom AI)
-├── supabase/       SQL migrations
+├── supabase/       SQL migrations + Edge Function (analyze-paper)
 ├── App.tsx         Root component and state
-├── server.ts       Express server and API routes
+├── server.ts       Express server (local dev only; optional)
 └── vite.config.ts  Vite configuration
 ```
 

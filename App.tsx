@@ -7,17 +7,12 @@ import { User, AnalysisSession, AppSettings } from './types';
 import toast, { Toaster } from 'react-hot-toast';
 import { supabase, isSupabaseConfigured } from './services/supabase';
 import {
-  fetchSessions,
-  createSession,
-  deleteSession,
-  clearAllSessions,
-  fetchMe
-} from './services/sessionsApi';
-
-async function getAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
-}
+  fetchSessionsFromSupabase,
+  createSessionInSupabase,
+  deleteSessionInSupabase,
+  clearAllSessionsInSupabase,
+  getMeFromSupabase
+} from './services/sessionsSupabase';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -57,11 +52,11 @@ export default function App() {
 
       if (isSupabaseConfigured()) {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          const me = await fetchMe(session.access_token);
+        if (session) {
+          const me = await getMeFromSupabase();
           if (me) {
             setUser({ id: me.id, email: me.email, username: me.username });
-            const list = await fetchSessions(session.access_token);
+            const list = await fetchSessionsFromSupabase();
             setSessions(list);
             setAuthReady(true);
             return;
@@ -93,11 +88,11 @@ export default function App() {
     if (!isSupabaseConfigured()) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (session?.access_token) {
-          const me = await fetchMe(session.access_token);
+        if (session) {
+          const me = await getMeFromSupabase();
           if (me) {
             setUser({ id: me.id, email: me.email, username: me.username });
-            const list = await fetchSessions(session.access_token);
+            const list = await fetchSessionsFromSupabase();
             setSessions(list);
           }
         } else {
@@ -112,13 +107,10 @@ export default function App() {
 
   const handleLogin = useCallback(async (newUser: User) => {
     setUser(newUser);
-    if (newUser.id) {
-      const token = await getAccessToken();
-      if (token) {
-        const list = await fetchSessions(token);
-        setSessions(list);
-      }
-    } else {
+    if (newUser.id && isSupabaseConfigured()) {
+      const list = await fetchSessionsFromSupabase();
+      setSessions(list);
+    } else if (!newUser.id) {
       localStorage.setItem('logos_user', JSON.stringify(newUser));
     }
   }, []);
@@ -135,9 +127,8 @@ export default function App() {
   }, [user?.id]);
 
   const handleNewSession = useCallback(async (session: AnalysisSession) => {
-    const token = await getAccessToken();
-    if (token && user?.id) {
-      const saved = await createSession(token, session);
+    if (isSupabaseConfigured() && user?.id) {
+      const saved = await createSessionInSupabase(session);
       if (saved) {
         setSessions(prev => [saved, ...prev]);
         setCurrentSessionId(saved.id);
@@ -153,9 +144,8 @@ export default function App() {
   }, [user?.id]);
 
   const handleClearHistory = useCallback(async () => {
-    const token = await getAccessToken();
-    if (token) {
-      const ok = await clearAllSessions(token);
+    if (isSupabaseConfigured()) {
+      const ok = await clearAllSessionsInSupabase();
       if (ok) {
         setSessions([]);
         setCurrentSessionId(null);
@@ -170,9 +160,8 @@ export default function App() {
   }, []);
 
   const handleDeleteSession = useCallback(async (id: string) => {
-    const token = await getAccessToken();
-    if (token) {
-      const ok = await deleteSession(token, id);
+    if (isSupabaseConfigured()) {
+      const ok = await deleteSessionInSupabase(id);
       if (ok) {
         setSessions(prev => prev.filter(s => s.id !== id));
         setCurrentSessionId(prev => (prev === id ? null : prev));

@@ -1,11 +1,16 @@
 import { AnalysisResult } from "../types";
-import { apiBase } from "../config/env";
 
 interface CustomAIConfig {
   baseUrl: string;
   apiKey: string;
   modelName: string;
 }
+
+/**
+ * Call the user's OpenAI-compatible API directly from the browser.
+ * Users add their own API in Settings (base URL, API key, model). No backend proxy.
+ * The API must allow CORS from your app origin (most hosted APIs do).
+ */
 
 export const analyzePaperWithCustomAI = async (
   paperText: string, 
@@ -64,21 +69,20 @@ export const analyzePaperWithCustomAI = async (
   `;
 
   try {
-    // Use the local proxy to avoid CORS issues
-    const response = await fetch(`${apiBase}/api/proxy/chat/completions`, {
+    const url = `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
       },
       body: JSON.stringify({
-        targetUrl: config.baseUrl,
-        apiKey: config.apiKey,
         model: config.modelName,
         messages: [
           { role: "system", content: "You are a helpful scientific assistant." },
           { role: "user", content: prompt }
         ],
-        temperature: temperature
+        temperature
       })
     });
 

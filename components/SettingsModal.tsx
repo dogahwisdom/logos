@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings } from '../types';
 import toast from 'react-hot-toast';
-import { apiBase } from '../config/env';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -134,6 +133,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {settings.modelProvider === 'custom' && (
               <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                  Use your own OpenAI-compatible API. It must allow CORS from this site.
+                </p>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>
                   <input 
@@ -204,25 +206,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                    onClick={async () => {
                      const toastId = toast.loading("Testing connection...");
                      try {
-                        const response = await fetch(`${apiBase}/api/proxy/chat/completions`, {
+                        const base = settings.customModelConfig?.baseUrl?.replace(/\/$/, '') ?? '';
+                        const url = `${base}/chat/completions`;
+                        const response = await fetch(url, {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${settings.customModelConfig?.apiKey ?? ''}`
+                          },
                           body: JSON.stringify({
-                            targetUrl: settings.customModelConfig?.baseUrl,
-                            apiKey: settings.customModelConfig?.apiKey,
                             model: settings.customModelConfig?.modelName,
                             messages: [{ role: "user", content: "Hello" }],
                             temperature: 0.7
                           })
                         });
                         if (response.ok) {
-                          toast.success("Connection Successful!", { id: toastId });
+                          toast.success("Connection successful. Click Save settings below to keep your changes.", { id: toastId, duration: 4000 });
                         } else {
-                          const err = await response.json();
-                          toast.error(`Connection Failed: ${err.error || response.statusText}`, { id: toastId });
+                          const err = await response.json().catch(() => ({}));
+                          toast.error(`Connection failed: ${(err as { error?: string })?.error ?? response.statusText}`, { id: toastId });
                         }
                      } catch (e) {
-                       toast.error("Connection Failed: Network Error", { id: toastId });
+                       toast.error("Connection failed. Check URL and CORS (API must allow requests from this site).", { id: toastId });
                      }
                    }}
                    className={`text-xs px-3 py-1 rounded border transition-colors ${
@@ -266,6 +271,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <p className="mt-2 text-xs text-zinc-500">
               Higher values encourage more novel hypothesis generation, while lower values focus on factual extraction.
             </p>
+          </div>
+
+          {/* Save */}
+          <div className={`pt-4 border-t ${isDark ? 'border-zinc-800' : 'border-zinc-200'}`}>
+            <button
+              type="button"
+              onClick={() => {
+                onUpdateSettings(settings);
+                toast.success("Settings saved.");
+                onClose();
+              }}
+              className={`w-full py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
+                isDark
+                  ? 'bg-orange-600 text-white hover:bg-orange-700'
+                  : 'bg-orange-600 text-white hover:bg-orange-700'
+              }`}
+            >
+              <i className="fas fa-check-circle"></i>
+              Save settings
+            </button>
           </div>
 
           {/* Danger Zone */}
