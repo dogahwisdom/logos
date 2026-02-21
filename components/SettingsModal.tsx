@@ -104,35 +104,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className={`block text-sm font-medium mb-3 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
                 Reasoning Engine
             </label>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-                <button
-                    onClick={() => onUpdateSettings({ ...settings, modelProvider: 'gemini' })}
-                    className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium border transition-all ${
-                        settings.modelProvider === 'gemini'
-                            ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500'
-                            : isDark 
-                              ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'
-                              : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:border-zinc-300'
-                    }`}
-                >
-                    <i className="fab fa-google mr-2"></i> Gemini 3.1 Pro
-                </button>
-                <button
-                    onClick={() => onUpdateSettings({ ...settings, modelProvider: 'custom' })}
-                    className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium border transition-all ${
-                        settings.modelProvider === 'custom'
-                            ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500'
-                            : isDark 
-                              ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'
-                              : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:border-zinc-300'
-                    }`}
-                >
-                    <i className="fas fa-cube mr-2"></i> Custom API (K2)
-                </button>
-            </div>
 
-            {settings.modelProvider === 'custom' && (
-              <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+            <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                 <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
                   Use your own OpenAI-compatible API. It must allow CORS from this site.
                 </p>
@@ -197,10 +170,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </div>
               </div>
-            )}
             
-            {settings.modelProvider === 'custom' && (
-               <div className="mt-2 flex justify-end">
+            <div className="mt-2 flex justify-end">
                  <button
                    type="button"
                    onClick={async () => {
@@ -239,7 +210,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                    <i className="fas fa-plug mr-1"></i> Test Connection
                  </button>
                </div>
-            )}
           </div>
 
           {/* Temperature Control */}
