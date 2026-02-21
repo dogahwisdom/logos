@@ -108,9 +108,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
 
             <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                  Connect an inference endpoint that implements the OpenAI Chat Completions API (e.g. OpenAI, Azure OpenAI, or self-hosted). Your endpoint must allow cross-origin requests from this origin.
-                </p>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>
                   <input 
