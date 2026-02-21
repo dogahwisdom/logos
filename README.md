@@ -81,7 +81,7 @@ With **Supabase**, you only deploy the frontend (Netlify) and the Edge Function 
    - In **Supabase Dashboard** → **Project Settings** → **Edge Functions** → **Secrets**, add:
      - **Name:** `GEMINI_API_KEY`  
      - **Value:** your Google AI (Gemini) API key
-3. **Auth (optional):** For Google sign-in, enable the Google provider and set redirect URLs under **Authentication** → **URL Configuration**.
+3. **Auth (optional):** For Google sign-in, follow [Google sign-in setup](#google-sign-in-setup) below.
 
 ### 2. Netlify (frontend)
 
@@ -91,6 +91,37 @@ With **Supabase**, you only deploy the frontend (Netlify) and the Edge Function 
    - `VITE_SUPABASE_URL` = your Supabase project URL (e.g. `https://xxx.supabase.co`)
    - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
 4. **Deploy.** The app will use Supabase for auth, sessions, and paper analysis (Edge Function). No `VITE_API_URL` or separate backend needed.
+
+## Google sign-in setup
+
+To make **Sign in with Google** work with Supabase, configure both Google Cloud and Supabase.
+
+### 1. Google Cloud Console
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create or select a project.
+2. Open **APIs & Services** → **Credentials** → **Create credentials** → **OAuth client ID**.
+3. If prompted, configure the **OAuth consent screen** (External user type is fine; add your app name and support email).
+4. Choose **Web application** as the application type.
+5. **Authorized redirect URIs** — add exactly:
+   - `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback`  
+   Replace `<YOUR_SUPABASE_PROJECT_REF>` with your project ref (e.g. from `https://ubnvmkyevlnqildjooav.supabase.co` the ref is `ubnvmkyevlnqildjooav`).
+6. (Optional) **Authorized JavaScript origins** — add your app origins, e.g.:
+   - `http://localhost:5173`
+   - `https://your-site.netlify.app`
+7. Create the client and copy the **Client ID** and **Client Secret**.
+
+### 2. Supabase Dashboard
+
+1. **Authentication** → **Providers** → **Google** → enable the provider.
+2. Paste the **Client ID** and **Client Secret** from Google, then Save.
+3. **Authentication** → **URL Configuration**:
+   - **Site URL:** Your production app URL (e.g. `https://your-site.netlify.app`) or `http://localhost:5173` for local testing.
+   - **Redirect URLs:** Add every URL where users can land after sign-in (Supabase will only redirect to these):
+     - `http://localhost:5173` (local dev)
+     - `https://your-site.netlify.app` (production)
+     - Add any other domains you use (e.g. preview URLs).
+
+After saving, **Sign in with Google** in the app will redirect to Google, then back to your app with the user signed in.
 
 ## Project structure
 
