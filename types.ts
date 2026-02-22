@@ -29,15 +29,30 @@ export interface AnalysisResult {
   citationIntegrity: string;
 }
 
+/** Reasoning engine provider. Gemini uses native API; others use OpenAI-compatible chat completions. */
+export type ReasoningProvider =
+  | 'openai'   // GPT-4, etc.
+  | 'gemini'   // Google Gemini
+  | 'anthropic' // Claude
+  | 'k2'       // MBZUAI K2
+  | 'groq'     // Groq (Llama, Mixtral, etc.)
+  | 'together' // Together (open models)
+  | 'custom';  // Any OpenAI-compatible endpoint
+
 export interface AppSettings {
   temperature: number;
   theme: 'dark' | 'light';
-  modelProvider: 'gemini' | 'custom';
-  customModelConfig?: {
-    baseUrl: string;
+  reasoningProvider: ReasoningProvider;
+  /** API key and model for the selected provider. For custom, baseUrl is also stored here. */
+  reasoningConfig: {
+    baseUrl: string;   // Only used when reasoningProvider === 'custom'
     apiKey: string;
     modelName: string;
   };
+  /** @deprecated Migrated to reasoningProvider + reasoningConfig */
+  modelProvider?: 'gemini' | 'custom';
+  customModelConfig?: { baseUrl: string; apiKey: string; modelName: string };
+  geminiConfig?: { apiKey: string; modelName: string };
 }
 
 export enum AppState {

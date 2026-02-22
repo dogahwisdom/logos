@@ -4,13 +4,22 @@ import { supabase } from './supabase';
 /**
  * Run paper analysis via Supabase Edge Function (Gemini).
  * Use when Supabase is configured so no separate backend is needed.
+ * Optional geminiApiKey and model override the Edge Function's env key/model.
  */
 export async function analyzePaperViaSupabase(
   paperText: string,
-  temperature: number = 0.7
+  temperature: number = 0.7,
+  options?: { geminiApiKey?: string; model?: string }
 ): Promise<AnalysisResult> {
+  const body: { paperText: string; temperature: number; geminiApiKey?: string; model?: string } = {
+    paperText,
+    temperature,
+  };
+  if (options?.geminiApiKey?.trim()) body.geminiApiKey = options.geminiApiKey.trim();
+  if (options?.model?.trim()) body.model = options.model.trim();
+
   const { data, error } = await supabase.functions.invoke<AnalysisResult>('analyze-paper', {
-    body: { paperText, temperature },
+    body,
   });
 
   if (error) {

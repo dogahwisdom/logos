@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { AppSettings } from '../types';
+import { AppSettings, type ReasoningProvider } from '../types';
 import { getChatCompletionsUrl } from '../services/customAiService';
+import { REASONING_PROVIDERS, PROVIDER_ORDER, getBaseUrlForProvider } from '../config/reasoningProviders';
 import toast from 'react-hot-toast';
 
 interface SettingsModalProps {
@@ -22,6 +23,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const isDark = theme === 'dark';
 
   // Reset confirmation state when modal opens or closes
@@ -29,6 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!isOpen) {
       setConfirmDelete(false);
       setShowApiKey(false);
+      setShowGeminiKey(false);
     }
   }, [isOpen]);
 
@@ -104,136 +107,119 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Model Provider Control */}
+          {/* Reasoning Engine — one section, many providers */}
           <div>
             <label className={`block text-sm font-medium mb-3 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                Reasoning Engine
+              Reasoning Engine
             </label>
             <p className={`text-xs mb-3 ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
-              Use any inference API you prefer. Your endpoint must allow requests from this site (CORS).
+              Choose a provider and add your API key. Your endpoint must allow requests from this site (CORS).
             </p>
-            <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                <div>
-                  <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>
-                  <input 
-                    type="text" 
-                    value={settings.customModelConfig?.baseUrl || ''}
-                    onChange={(e) => onUpdateSettings({ 
-                      ...settings, 
-                      customModelConfig: { 
-                        ...settings.customModelConfig, 
-                        baseUrl: e.target.value,
-                        apiKey: settings.customModelConfig?.apiKey || '',
-                        modelName: settings.customModelConfig?.modelName || ''
-                      } 
+            <div className="flex flex-wrap gap-2 mb-3">
+              {PROVIDER_ORDER.map((p) => {
+                const label = p === 'custom' ? 'Custom' : REASONING_PROVIDERS[p].label;
+                const isActive = (settings.reasoningProvider ?? (settings.modelProvider === 'gemini' ? 'gemini' : 'custom')) === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => onUpdateSettings({
+                      ...settings,
+                      reasoningProvider: p,
+                      reasoningConfig: settings.reasoningConfig ?? { baseUrl: '', apiKey: '', modelName: '' },
                     })}
-                    placeholder="https://your-api.example.com/v1"
-                    className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
-                      isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
+                      isActive ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500' : isDark ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:border-zinc-300'
                     }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>API Key</label>
-                  <div className="relative">
-                    <input 
-                      type={showApiKey ? 'text' : 'password'}
-                      value={settings.customModelConfig?.apiKey || ''}
-                      onChange={(e) => onUpdateSettings({ 
-                        ...settings, 
-                        customModelConfig: { 
-                          ...settings.customModelConfig, 
-                          baseUrl: settings.customModelConfig?.baseUrl || '',
-                          apiKey: e.target.value,
-                          modelName: settings.customModelConfig?.modelName || ''
-                        } 
-                      })}
-                      placeholder="sk-... or your API key"
-                      className={`w-full px-3 py-2 pr-10 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
-                        isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey((v) => !v)}
-                      className={`absolute inset-y-0 right-0 flex items-center justify-center w-9 text-sm focus:outline-none rounded-r ${
-                        isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'
-                      }`}
-                      aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                    >
-                      <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
-                    </button>
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {(() => {
+              const provider = settings.reasoningProvider ?? (settings.modelProvider === 'gemini' ? 'gemini' : 'custom');
+              const config = settings.reasoningConfig ?? { baseUrl: '', apiKey: '', modelName: '' };
+              const meta = provider !== 'custom' ? REASONING_PROVIDERS[provider] : null;
+              const isGemini = provider === 'gemini';
+              const showBaseUrl = provider === 'custom';
+              const updateConfig = (partial: Partial<typeof config>) =>
+                onUpdateSettings({ ...settings, reasoningConfig: { ...config, ...partial } });
+              return (
+                <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                  {isGemini && (
+                    <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
+                      Add your key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">Google AI Studio</a>. Leave blank to use the project key.
+                    </p>
+                  )}
+                  {showBaseUrl && (
+                    <div>
+                      <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>
+                      <input
+                        type="text"
+                        value={config.baseUrl}
+                        onChange={(e) => updateConfig({ baseUrl: e.target.value })}
+                        placeholder="https://api.example.com/v1"
+                        className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'}`}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>API Key</label>
+                    <div className="relative">
+                      <input
+                        type={isGemini ? (showGeminiKey ? 'text' : 'password') : (showApiKey ? 'text' : 'password')}
+                        value={config.apiKey}
+                        onChange={(e) => updateConfig({ apiKey: e.target.value })}
+                        placeholder={isGemini ? 'Optional — leave blank for project key' : 'Your API key'}
+                        className={`w-full px-3 py-2 pr-10 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'}`}
+                      />
+                      <button type="button" onClick={() => (isGemini ? setShowGeminiKey((v) => !v) : setShowApiKey((v) => !v))} className={`absolute inset-y-0 right-0 flex items-center justify-center w-9 text-sm focus:outline-none rounded-r ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`} aria-label="Show or hide API key">
+                        <i className={`fas ${(isGemini ? showGeminiKey : showApiKey) ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
+                      </button>
+                    </div>
                   </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Model</label>
+                    <input
+                      type="text"
+                      value={config.modelName}
+                      onChange={(e) => updateConfig({ modelName: e.target.value })}
+                      placeholder={meta?.modelPlaceholder ?? 'e.g. your model id'}
+                      className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'}`}
+                    />
+                  </div>
+                  {!isGemini && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const toastId = toast.loading("Testing connection...");
+                          try {
+                            const baseUrl = getBaseUrlForProvider(provider, config.baseUrl);
+                            const url = getChatCompletionsUrl(baseUrl);
+                            if (!url) { toast.error("Enter a Base URL first (Custom).", { id: toastId }); return; }
+                            const res = await fetch(url, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+                              body: JSON.stringify({ model: config.modelName, messages: [{ role: 'user', content: 'Hello' }], temperature: 0.7 }),
+                            });
+                            if (res.ok) toast.success("Connection successful. Save settings to keep changes.", { id: toastId, duration: 4000 });
+                            else {
+                              const err = await res.json().catch(() => ({}));
+                              toast.error(`Connection failed: ${(err as { error?: string })?.error ?? res.statusText}`, { id: toastId, duration: 5000 });
+                            }
+                          } catch (e) { toast.error(e instanceof Error ? e.message : "Connection failed.", { id: toastId, duration: 5000 }); }
+                        }}
+                        className={`text-xs px-3 py-1 rounded border ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-300 text-zinc-700 hover:bg-zinc-200'}`}
+                      >
+                        <i className="fas fa-plug mr-1" aria-hidden /> Test Connection
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Model Name</label>
-                  <input 
-                    type="text" 
-                    value={settings.customModelConfig?.modelName || ''}
-                    onChange={(e) => onUpdateSettings({ 
-                      ...settings, 
-                      customModelConfig: { 
-                        ...settings.customModelConfig, 
-                        baseUrl: settings.customModelConfig?.baseUrl || '',
-                        apiKey: settings.customModelConfig?.apiKey || '',
-                        modelName: e.target.value
-                      } 
-                    })}
-                    placeholder="k2-think-v2"
-                    className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
-                      isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
-                    }`}
-                  />
-                </div>
-              </div>
-            
-            <div className="mt-2 flex justify-end">
-                 <button
-                   type="button"
-                   onClick={async () => {
-                     const toastId = toast.loading("Testing connection...");
-                     try {
-                        const url = getChatCompletionsUrl(settings.customModelConfig?.baseUrl ?? '');
-                        if (!url) {
-                          toast.error("Enter a Base URL first.", { id: toastId });
-                          return;
-                        }
-                        const response = await fetch(url, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${settings.customModelConfig?.apiKey ?? ''}`
-                          },
-                          body: JSON.stringify({
-                            model: settings.customModelConfig?.modelName,
-                            messages: [{ role: "user", content: "Hello" }],
-                            temperature: 0.7
-                          })
-                        });
-                        if (response.ok) {
-                          toast.success("Connection successful. Click Save settings below to keep your changes.", { id: toastId, duration: 4000 });
-                        } else {
-                          const err = await response.json().catch(() => ({}));
-                          const msg = (err as { error?: string })?.error ?? (response.statusText || `HTTP ${response.status}`);
-                          toast.error(`Connection failed: ${msg}`, { id: toastId, duration: 5000 });
-                        }
-                     } catch (e) {
-                       const msg = e instanceof Error ? e.message : "Network error";
-                       const hint = msg.includes("Failed to fetch") || msg.includes("NetworkError")
-                         ? " Check Base URL, API key, and CORS (API must allow requests from this site)."
-                         : " Check Base URL and API key.";
-                       toast.error("Connection failed." + hint, { id: toastId, duration: 5000 });
-                     }
-                   }}
-                   className={`text-xs px-3 py-1 rounded border transition-colors ${
-                     isDark 
-                       ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' 
-                       : 'bg-zinc-100 border-zinc-300 text-zinc-700 hover:bg-zinc-200'
-                   }`}
-                 >
-                   <i className="fas fa-plug mr-1"></i> Test Connection
-                 </button>
-               </div>
+              );
+            })()}
           </div>
 
           {/* Temperature Control */}

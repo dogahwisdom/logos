@@ -6,6 +6,7 @@ import { analyzePaperViaSupabase } from '../services/analyzePaperSupabase';
 import { isSupabaseConfigured } from '../services/supabase';
 import type { AnalysisResult } from '../types';
 import { apiBase } from '../config/env';
+import { getBaseUrlForProvider } from '../config/reasoningProviders';
 import { MOCK_LOADING_STEPS } from '../constants';
 import { Scorecard } from './Scorecard';
 import { ReasoningGraph } from './ReasoningGraph';
@@ -100,22 +101,35 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
       }
 
       let result: AnalysisResult;
+      const provider = settings.reasoningProvider ?? (settings.modelProvider === 'gemini' ? 'gemini' : 'custom');
+      const config = settings.reasoningConfig ?? (provider === 'gemini' ? settings.geminiConfig : settings.customModelConfig) ?? { baseUrl: '', apiKey: '', modelName: '' };
 
-      if (settings.modelProvider === 'custom' && settings.customModelConfig?.baseUrl) {
-        result = await analyzePaperWithCustomAI(text, settings.customModelConfig, settings.temperature);
-      } else if (isSupabaseConfigured()) {
-        result = await analyzePaperViaSupabase(text, settings.temperature);
-      } else {
-        const resp = await fetch(`${apiBase}/api/analyze`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paperText: text, temperature: settings.temperature })
+      if (provider === 'gemini' && isSupabaseConfigured()) {
+        result = await analyzePaperViaSupabase(text, settings.temperature, {
+          geminiApiKey: config.apiKey,
+          model: config.modelName,
         });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err.error || 'Analysis request failed');
+      } else {
+        const baseUrl = getBaseUrlForProvider(provider, config.baseUrl);
+        if (provider === 'custom' && !baseUrl) {
+          throw new Error("Add a Base URL in Settings (Reasoning Engine → Custom).");
         }
-        result = (await resp.json()) as AnalysisResult;
+        if (baseUrl) {
+          result = await analyzePaperWithCustomAI(text, { baseUrl, apiKey: config.apiKey, modelName: config.modelName }, settings.temperature);
+        } else if (isSupabaseConfigured()) {
+          result = await analyzePaperViaSupabase(text, settings.temperature, { geminiApiKey: config.apiKey, model: config.modelName });
+        } else {
+        const resp = await fetch(`${apiBase}/api/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paperText: text, temperature: settings.temperature })
+          });
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || 'Analysis request failed');
+          }
+          result = (await resp.json()) as AnalysisResult;
+        }
       }
 
       if (loadingStepIntervalRef.current) {

@@ -115,15 +115,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: "GEMINI_API_KEY not configured" }),
-      { status: 500, headers: corsHeaders(origin) }
-    );
-  }
-
-  let body: { paperText?: string; temperature?: number };
+  let body: { paperText?: string; temperature?: number; geminiApiKey?: string; model?: string };
   try {
     body = await req.json();
   } catch {
@@ -141,10 +133,21 @@ Deno.serve(async (req) => {
     );
   }
 
+  const apiKey = (body.geminiApiKey && typeof body.geminiApiKey === "string" && body.geminiApiKey.trim())
+    ? body.geminiApiKey.trim()
+    : Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: "No Gemini API key. Add your key in Settings (Gemini API) or set GEMINI_API_KEY in Edge Function secrets." }),
+      { status: 400, headers: corsHeaders(origin) }
+    );
+  }
+
   const temperature = typeof body.temperature === "number" ? body.temperature : 0.7;
+  const model = (body.model && typeof body.model === "string" && body.model.trim()) ? body.model.trim() : MODEL;
   const prompt = PROMPT + paperText.slice(0, 30000);
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -26,12 +26,8 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>({
     temperature: 0.7,
     theme: 'dark',
-    modelProvider: 'gemini',
-    customModelConfig: {
-      baseUrl: '',
-      apiKey: '',
-      modelName: ''
-    }
+    reasoningProvider: 'custom',
+    reasoningConfig: { baseUrl: '', apiKey: '', modelName: '' },
   });
 
   // Restore session from Supabase or localStorage (with timeout so desktop never hangs)
@@ -63,11 +59,15 @@ export default function App() {
         if (storedSettings) {
           try {
             const parsed = JSON.parse(storedSettings);
+            const provider = parsed.reasoningProvider ?? (parsed.modelProvider === 'gemini' ? 'gemini' : 'custom');
+            const config = parsed.reasoningConfig ?? (provider === 'gemini'
+              ? { baseUrl: '', apiKey: parsed.geminiConfig?.apiKey ?? '', modelName: parsed.geminiConfig?.modelName ?? 'gemini-2.0-flash' }
+              : { baseUrl: parsed.customModelConfig?.baseUrl ?? '', apiKey: parsed.customModelConfig?.apiKey ?? '', modelName: parsed.customModelConfig?.modelName ?? '' });
             setSettings(prev => ({
               ...prev,
               ...parsed,
-              customModelConfig: parsed.customModelConfig ?? prev.customModelConfig,
-              modelProvider: parsed.modelProvider ?? prev.modelProvider
+              reasoningProvider: provider,
+              reasoningConfig: config,
             }));
           } catch {
             /* ignore */
