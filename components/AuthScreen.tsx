@@ -19,8 +19,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [accountCreatedUser, setAccountCreatedUser] = useState<User | null>(null);
   const [emailConfirmRequired, setEmailConfirmRequired] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const isDark = theme === 'dark';
+
+  const handleResendConfirmation = async () => {
+    if (!email?.trim() || !isSupabaseConfigured()) return;
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      if (error) throw error;
+      toast.success('Confirmation email sent. Check your inbox and spam folder.');
+    } catch (err: unknown) {
+      console.error('Resend confirmation error:', err);
+      toast.error(err instanceof Error ? err.message : 'Could not resend. Try again in a few minutes.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   // Custom Google OAuth (server callback) only when Supabase is not configured
   useEffect(() => {
@@ -281,10 +297,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         ) : (
         <>
         {emailConfirmRequired && (
-          <div className={`rounded-lg border px-4 py-3 text-sm ${
+          <div className={`rounded-lg border px-4 py-3 text-sm space-y-3 ${
             isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800'
           }`}>
-            Check your email to confirm your account, then sign in below.
+            <p>Check your email to confirm your account (including spam), then sign in below.</p>
+            <button
+              type="button"
+              onClick={handleResendConfirmation}
+              disabled={resendLoading}
+              className={`text-xs font-medium underline focus:outline-none ${resendLoading ? 'opacity-60' : ''} ${isDark ? 'text-amber-300 hover:text-amber-200' : 'text-amber-700 hover:text-amber-900'}`}
+            >
+              {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+            </button>
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
