@@ -114,8 +114,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
     }
   };
 
-  // Safety net so the UI never stays on "Processing..." (e.g. slow network or Supabase unreachable)
-  const AUTH_TIMEOUT_MS = 12_000;
+  // Safety net so the UI never stays on "Processing..." (e.g. slow network or Supabase cold start)
+  const AUTH_TIMEOUT_MS = 22_000;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +131,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(
-        () => reject(new Error("Sign-in is taking too long. Check your connection and try again.")),
+        () => reject(new Error("This is taking longer than usual. Check your connection and try again in a moment.")),
         AUTH_TIMEOUT_MS
       );
     });
@@ -241,7 +241,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             : msg.includes("Email not confirmed") || msg.includes("email_not_confirmed")
               ? "Your account isn’t confirmed yet. Use “Resend confirmation email” below, or ask the site admin to confirm your user in Supabase → Authentication → Users."
               : msg.includes("already registered") || msg.includes("already exists")
-                ? "An account with this email already exists. Sign in above. Can't sign in? Use “Forgot password?” to reset your password."
+                ? "An account with this email already exists. Use Sign in below with the same email, or Forgot password? to reset."
                 : msg;
         let hint = "";
         if (!isLogin && (msg.toLowerCase().includes("signup") || msg.toLowerCase().includes("disabled") || msg.toLowerCase().includes("not allowed"))) {
@@ -251,6 +251,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         }
         if (isLogin && (msg.includes("Email not confirmed") || msg.includes("email_not_confirmed"))) {
           setEmailConfirmRequired(true);
+        }
+        if (!isLogin && (msg.includes("already registered") || msg.includes("already exists"))) {
+          setIsLogin(true);
         }
         setAuthError(friendly + hint);
         toast.error(friendly, { duration: 6000 });
