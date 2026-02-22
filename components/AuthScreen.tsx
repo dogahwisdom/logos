@@ -17,6 +17,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [accountCreatedUser, setAccountCreatedUser] = useState<User | null>(null);
+  const [emailConfirmRequired, setEmailConfirmRequired] = useState(false);
 
   const isDark = theme === 'dark';
 
@@ -127,7 +129,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             username: data.user.user_metadata?.username || email.split('@')[0],
             email: data.user.email || email
           };
-          toast.success("Welcome back to LOGOS.");
           onLogin(user);
         } else {
           // Session might be in client but not in response; try once
@@ -139,7 +140,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
               username: (u.user_metadata?.username as string) || u.email?.split('@')[0] || 'User',
               email: u.email ?? email
             };
-            toast.success("Welcome back to LOGOS.");
             onLogin(user);
           }
         }
@@ -160,10 +160,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
               username,
               email
             };
-            toast.success("Account created successfully.");
-            onLogin(user);
+            setAccountCreatedUser(user);
           } else {
-            toast.success("Check your email to confirm your account, then sign in.", { duration: 6000 });
+            setEmailConfirmRequired(true);
             setIsLogin(true);
           }
         }
@@ -218,7 +217,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           <p className="text-sm text-zinc-500">Scientific Discovery Agent</p>
         </div>
 
-        {showForgotPassword && isSupabaseConfigured() ? (
+        {accountCreatedUser ? (
+          <div className="space-y-6 text-center">
+            <div className={`inline-flex h-14 w-14 items-center justify-center rounded-full ${
+              isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'
+            }`}>
+              <i className="fas fa-check text-2xl" aria-hidden />
+            </div>
+            <div>
+              <h2 className={`text-lg font-semibold mb-1 ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+                Account created successfully
+              </h2>
+              <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                Welcome to LOGOS. You can start analyzing research papers.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onLogin(accountCreatedUser);
+                setAccountCreatedUser(null);
+              }}
+              className="w-full min-h-[44px] py-3 px-4 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-transparent transition-colors"
+            >
+              Continue
+            </button>
+          </div>
+        ) : showForgotPassword && isSupabaseConfigured() ? (
           <>
             <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
               Enter your email and we’ll send you a link to reset your password.
@@ -255,6 +280,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           </>
         ) : (
         <>
+        {emailConfirmRequired && (
+          <div className={`rounded-lg border px-4 py-3 text-sm ${
+            isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800'
+          }`}>
+            Check your email to confirm your account, then sign in below.
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
             <div>
@@ -380,7 +412,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             {isLogin ? "Don't have an account? " : "Already have an account? "}
           </span>
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setEmailConfirmRequired(false);
+            }}
             className="font-medium text-orange-600 hover:text-orange-500"
           >
             {isLogin ? 'Sign up' : 'Log in'}
