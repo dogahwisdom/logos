@@ -145,24 +145,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
     } catch (error: any) {
       console.error("Auth Error:", error);
       
-      // Check for "Failed to fetch" (Network Error) which happens with placeholder URL
-      // OR specific Supabase configuration errors
+      // Network/config error: Supabase unreachable (e.g. placeholder or offline)
       if (
-        error.message === "Failed to fetch" || 
-        error.message?.includes("Supabase URL") || 
+        error.message === "Failed to fetch" ||
+        error.message?.includes("Supabase URL") ||
         error.message?.includes("apikey")
       ) {
-         console.warn("Supabase not reachable (likely placeholder), falling back to mock auth.");
-         
-         // Simulate network delay for realism
-         setTimeout(() => {
-            const user: User = {
-              username: isLogin ? email.split('@')[0] : username,
-              email: email
-            };
-            toast.success(isLogin ? "Welcome back (Demo Mode)." : "Account created (Demo Mode).");
-            onLogin(user);
-         }, 800);
+        console.warn("Supabase unreachable, using local sign-in.");
+        setTimeout(() => {
+          const user: User = {
+            username: isLogin ? email.split('@')[0] : username,
+            email: email
+          };
+          toast.success(isLogin ? "Welcome back." : "Account created. Connect Supabase to sync your data.");
+          onLogin(user);
+        }, 800);
       } else {
         toast.error(error.message || "Authentication failed");
       }

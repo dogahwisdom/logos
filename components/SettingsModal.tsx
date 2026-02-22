@@ -124,7 +124,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         modelName: settings.customModelConfig?.modelName || ''
                       } 
                     })}
-                    placeholder="https://api.example.com/v1"
+                    placeholder="https://your-api.example.com/v1"
                     className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
                       isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
                     }`}

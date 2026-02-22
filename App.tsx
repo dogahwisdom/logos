@@ -34,54 +34,74 @@ export default function App() {
     }
   });
 
-  // Restore session from Supabase or localStorage
+  // Restore session from Supabase or localStorage (with timeout so desktop never hangs)
   useEffect(() => {
-    const init = async () => {
-      const storedSettings = localStorage.getItem('logos_settings');
-      if (storedSettings) {
-        try {
-          const parsed = JSON.parse(storedSettings);
-          setSettings(prev => ({
-            ...prev,
-            ...parsed,
-            customModelConfig: parsed.customModelConfig ?? prev.customModelConfig,
-            modelProvider: parsed.modelProvider ?? prev.modelProvider
-          }));
-        } catch {
-          /* ignore */
-        }
-      }
+    const INIT_TIMEOUT_MS = 10_000;
 
-      if (isSupabaseConfigured()) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const me = await getMeFromSupabase();
-          if (me) {
-            setUser({ id: me.id, email: me.email, username: me.username });
-            const list = await fetchSessionsFromSupabase();
-            setSessions(list);
-            setAuthReady(true);
-            return;
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('init_timeout')), INIT_TIMEOUT_MS);
+    });
+
+    const initSupabase = async (): Promise<boolean> => {
+      if (!isSupabaseConfigured()) return false;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+      const me = await getMeFromSupabase();
+      if (!me) return false;
+      setUser({ id: me.id, email: me.email, username: me.username });
+      const list = await fetchSessionsFromSupabase();
+      setSessions(list);
+      return true;
+    };
+
+    const init = async () => {
+      try {
+        const storedSettings = localStorage.getItem('logos_settings');
+        if (storedSettings) {
+          try {
+            const parsed = JSON.parse(storedSettings);
+            setSettings(prev => ({
+              ...prev,
+              ...parsed,
+              customModelConfig: parsed.customModelConfig ?? prev.customModelConfig,
+              modelProvider: parsed.modelProvider ?? prev.modelProvider
+            }));
+          } catch {
+            /* ignore */
           }
         }
-      }
-      const storedUser = localStorage.getItem('logos_user');
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch {
-          /* ignore */
+
+        const completed = await Promise.race([
+          initSupabase(),
+          timeoutPromise.then(() => false)
+        ]).catch(() => false);
+
+        if (completed) {
+          setAuthReady(true);
+          return;
         }
-      }
-      const storedSessions = localStorage.getItem('logos_sessions');
-      if (storedSessions) {
-        try {
-          setSessions(JSON.parse(storedSessions));
-        } catch {
-          /* ignore */
+
+        const storedUser = localStorage.getItem('logos_user');
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {
+            /* ignore */
+          }
         }
+        const storedSessions = localStorage.getItem('logos_sessions');
+        if (storedSessions) {
+          try {
+            setSessions(JSON.parse(storedSessions));
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch (e) {
+        console.warn('Init error:', e);
+      } finally {
+        setAuthReady(true);
       }
-      setAuthReady(true);
     };
     init();
   }, []);

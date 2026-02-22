@@ -20,5 +20,9 @@ export async function analyzePaperViaSupabase(
   if (!data) {
     throw new Error('No response from analysis');
   }
-  return data;
+  const errMsg = typeof (data as { error?: unknown }).error === 'string' ? (data as { error: string }).error : null;
+  if (errMsg) {
+    throw new Error(errMsg);
+  }
+  return data as AnalysisResult;
 }

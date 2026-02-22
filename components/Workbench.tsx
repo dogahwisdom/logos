@@ -35,7 +35,18 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadingStepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isDark = settings.theme === 'dark';
+
+  // Clear loading interval on unmount (e.g. user navigates away during analysis)
+  useEffect(() => {
+    return () => {
+      if (loadingStepIntervalRef.current) {
+        clearInterval(loadingStepIntervalRef.current);
+        loadingStepIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Close share menu on click outside
   useEffect(() => {
@@ -73,11 +84,14 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
 
     setAppState(AppState.ANALYZING);
     setLoadingStep(0);
-    
-    // Simulate loading steps for UX
+    if (loadingStepIntervalRef.current) {
+      clearInterval(loadingStepIntervalRef.current);
+      loadingStepIntervalRef.current = null;
+    }
     const stepInterval = setInterval(() => {
       setLoadingStep(prev => (prev < MOCK_LOADING_STEPS.length - 1 ? prev + 1 : prev));
     }, 1500);
+    loadingStepIntervalRef.current = stepInterval;
 
     try {
       const text = await extractTextFromPdf(file);
@@ -104,8 +118,10 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
         result = (await resp.json()) as AnalysisResult;
       }
 
-      clearInterval(stepInterval);
-      
+      if (loadingStepIntervalRef.current) {
+        clearInterval(loadingStepIntervalRef.current);
+        loadingStepIntervalRef.current = null;
+      }
       const newSession: AnalysisSession = {
         id: Date.now().toString(),
         filename: file.name,
@@ -126,7 +142,10 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
       toast.success("Analysis Complete");
 
     } catch (error) {
-      clearInterval(stepInterval);
+      if (loadingStepIntervalRef.current) {
+        clearInterval(loadingStepIntervalRef.current);
+        loadingStepIntervalRef.current = null;
+      }
       console.error("Analysis Error:", error);
       setAppState(AppState.ERROR);
       toast.error(error instanceof Error ? error.message : "Analysis failed");
@@ -148,7 +167,7 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
           data.push({ x: i, y: Math.random() });
         }
         setSimulationData(data);
-        toast.error("AI did not generate simulation data. Showing placeholder.");
+        toast("Using sample data for the chart.");
       }
       setSimulationStatus('complete');
       toast.success("Simulation Complete");
