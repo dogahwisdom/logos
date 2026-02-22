@@ -233,11 +233,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             : msg.includes("Email not confirmed") || msg.includes("email_not_confirmed")
               ? "Your account isn’t confirmed yet. Use “Resend confirmation email” below, or ask the site admin to confirm your user in Supabase → Authentication → Users."
               : msg.includes("already registered") || msg.includes("already exists")
-                ? "An account with this email already exists. Sign in instead."
+                ? "An account with this email already exists. Sign in above. Can't sign in? Use “Forgot password?” to reset your password."
                 : msg;
-        const hint = !isLogin && (msg.toLowerCase().includes("signup") || msg.toLowerCase().includes("disabled") || msg.toLowerCase().includes("not allowed"))
-          ? " In Supabase: Authentication → Providers → Email → turn ON “Allow new users to sign up”."
-          : "";
+        let hint = "";
+        if (!isLogin && (msg.toLowerCase().includes("signup") || msg.toLowerCase().includes("disabled") || msg.toLowerCase().includes("not allowed"))) {
+          hint = " In Supabase: Authentication → Providers → Email → turn ON “Allow new users to sign up”.";
+        } else if (isLogin && (msg.includes("Invalid login") || msg.includes("invalid_credentials"))) {
+          hint = " Forgot your password? Use “Forgot password?” below to reset it.";
+        }
+        if (isLogin && (msg.includes("Email not confirmed") || msg.includes("email_not_confirmed"))) {
+          setEmailConfirmRequired(true);
+        }
         setAuthError(friendly + hint);
         toast.error(friendly, { duration: 6000 });
       }
