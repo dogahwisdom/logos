@@ -20,6 +20,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
   const [accountCreatedUser, setAccountCreatedUser] = useState<User | null>(null);
   const [emailConfirmRequired, setEmailConfirmRequired] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const isDark = theme === 'dark';
 
@@ -118,6 +119,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     if (!email || !password || (!isLogin && !username)) {
       toast.error("Please fill in all fields");
       return;
@@ -168,7 +170,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         });
         const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
-        if (error) throw error;
+        if (error) {
+          console.warn("Sign up error:", error.message, error);
+          throw error;
+        }
         if (data?.user) {
           if (data.session) {
             const user: User = {
@@ -194,7 +199,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             }
           }
         } else {
-          toast.error("Sign up did not complete. Try again or sign in if you already have an account.");
+          console.warn("Sign up: no user in response", { data, error });
+          const fallbackMsg = data?.user === undefined && !error
+            ? "Sign up returned no user. Check Supabase: Authentication → Providers → Email → turn ON “Allow new users to sign up”."
+            : "Sign up did not complete. Try again or sign in if you already have an account.";
+          setAuthError(fallbackMsg);
+          toast.error(fallbackMsg);
         }
       }
     } catch (error: unknown) {
@@ -225,6 +235,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
               : msg.includes("already registered") || msg.includes("already exists")
                 ? "An account with this email already exists. Sign in instead."
                 : msg;
+        const hint = !isLogin && (msg.toLowerCase().includes("signup") || msg.toLowerCase().includes("disabled") || msg.toLowerCase().includes("not allowed"))
+          ? " In Supabase: Authentication → Providers → Email → turn ON “Allow new users to sign up”."
+          : "";
+        setAuthError(friendly + hint);
         toast.error(friendly, { duration: 6000 });
       }
     } finally {
@@ -311,6 +325,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           </>
         ) : (
         <>
+        {authError && (
+          <div className={`rounded-lg border px-4 py-3 text-sm ${
+            isDark ? 'bg-red-500/10 border-red-500/30 text-red-200' : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            {authError}
+          </div>
+        )}
         {emailConfirmRequired && (
           <div className={`rounded-lg border px-4 py-3 text-sm space-y-3 ${
             isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -454,6 +475,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             onClick={() => {
               setIsLogin(!isLogin);
               setEmailConfirmRequired(false);
+              setAuthError(null);
             }}
             className="font-medium text-orange-600 hover:text-orange-500"
           >
