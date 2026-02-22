@@ -147,11 +147,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onUpdateSettings({ ...settings, reasoningConfig: { ...config, ...partial } });
               return (
                 <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
-                  {isGemini && (
-                    <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-zinc-500'}`}>
-                      Add your key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">Google AI Studio</a>. Leave blank to use the project key.
-                    </p>
-                  )}
                   {showBaseUrl && (
                     <div>
                       <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Base URL</label>
