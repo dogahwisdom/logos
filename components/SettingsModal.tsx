@@ -149,18 +149,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         } 
                       })}
                       placeholder="sk-... or your API key"
-                      className={`w-full px-3 py-2 pr-10 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
+                      className={`w-full px-3 py-2 pr-24 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
                         isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
                       }`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey((v) => !v)}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded ${isDark ? 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800' : 'text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100'}`}
+                      className={`absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                        isDark
+                          ? 'border-zinc-600 text-zinc-300 hover:text-white hover:bg-zinc-700 hover:border-zinc-500'
+                          : 'border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                      }`}
                       aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                      title={showApiKey ? 'Hide' : 'Show'}
+                      title={showApiKey ? 'Hide key' : 'Show key'}
                     >
-                      <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                      <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
+                      <span>{showApiKey ? 'Hide' : 'Show'}</span>
                     </button>
                   </div>
                 </div>
