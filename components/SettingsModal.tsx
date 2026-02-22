@@ -21,12 +21,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   theme
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const isDark = theme === 'dark';
 
   // Reset confirmation state when modal opens or closes
   useEffect(() => {
     if (!isOpen) {
       setConfirmDelete(false);
+      setShowApiKey(false);
     }
   }, [isOpen]);
 
@@ -133,23 +135,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>API Key</label>
-                  <input 
-                    type="password" 
-                    value={settings.customModelConfig?.apiKey || ''}
-                    onChange={(e) => onUpdateSettings({ 
-                      ...settings, 
-                      customModelConfig: { 
-                        ...settings.customModelConfig, 
-                        baseUrl: settings.customModelConfig?.baseUrl || '',
-                        apiKey: e.target.value,
-                        modelName: settings.customModelConfig?.modelName || ''
-                      } 
-                    })}
-                    placeholder="sk-..."
-                    className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
-                      isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showApiKey ? 'text' : 'password'}
+                      value={settings.customModelConfig?.apiKey || ''}
+                      onChange={(e) => onUpdateSettings({ 
+                        ...settings, 
+                        customModelConfig: { 
+                          ...settings.customModelConfig, 
+                          baseUrl: settings.customModelConfig?.baseUrl || '',
+                          apiKey: e.target.value,
+                          modelName: settings.customModelConfig?.modelName || ''
+                        } 
+                      })}
+                      placeholder="sk-... or your API key"
+                      className={`w-full px-3 py-2 pr-10 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
+                        isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((v) => !v)}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded ${isDark ? 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800' : 'text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100'}`}
+                      aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                      title={showApiKey ? 'Hide' : 'Show'}
+                    >
+                      <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'} text-sm`} />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Model Name</label>
