@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings } from '../types';
+import { getChatCompletionsUrl } from '../services/customAiService';
 import toast from 'react-hot-toast';
 
 interface SettingsModalProps {
@@ -178,8 +179,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                    onClick={async () => {
                      const toastId = toast.loading("Testing connection...");
                      try {
-                        const base = settings.customModelConfig?.baseUrl?.replace(/\/$/, '') ?? '';
-                        const url = `${base}/chat/completions`;
+                        const url = getChatCompletionsUrl(settings.customModelConfig?.baseUrl ?? '');
+                        if (!url) {
+                          toast.error("Enter a Base URL first.", { id: toastId });
+                          return;
+                        }
                         const response = await fetch(url, {
                           method: 'POST',
                           headers: {
@@ -196,10 +200,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           toast.success("Connection successful. Click Save settings below to keep your changes.", { id: toastId, duration: 4000 });
                         } else {
                           const err = await response.json().catch(() => ({}));
-                          toast.error(`Connection failed: ${(err as { error?: string })?.error ?? response.statusText}`, { id: toastId });
+                          const msg = (err as { error?: string })?.error ?? response.statusText || `HTTP ${response.status}`;
+                          toast.error(`Connection failed: ${msg}`, { id: toastId, duration: 5000 });
                         }
                      } catch (e) {
-                       toast.error("Connection failed. Check URL and CORS (API must allow requests from this site).", { id: toastId });
+                       const msg = e instanceof Error ? e.message : "Network error";
+                       const hint = msg.includes("Failed to fetch") || msg.includes("NetworkError")
+                         ? " Check Base URL, API key, and CORS (API must allow requests from this site)."
+                         : " Check Base URL and API key.";
+                       toast.error("Connection failed." + hint, { id: toastId, duration: 5000 });
                      }
                    }}
                    className={`text-xs px-3 py-1 rounded border transition-colors ${

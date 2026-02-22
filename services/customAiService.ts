@@ -12,6 +12,14 @@ interface CustomAIConfig {
  * The API must allow CORS from your app origin (most hosted APIs do).
  */
 
+/** Build chat completions URL: accept either base (e.g. https://api.example.com/v1) or full path (e.g. .../v1/chat/completions). */
+export function getChatCompletionsUrl(baseUrl: string): string {
+  const base = baseUrl.replace(/\/$/, '').trim();
+  if (!base) return '';
+  if (/\/chat\/completions$/i.test(base)) return base;
+  return `${base}/chat/completions`;
+}
+
 export const analyzePaperWithCustomAI = async (
   paperText: string, 
   config: CustomAIConfig,
@@ -69,7 +77,7 @@ export const analyzePaperWithCustomAI = async (
   `;
 
   try {
-    const url = `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
+    const url = getChatCompletionsUrl(config.baseUrl);
     const response = await fetch(url, {
       method: 'POST',
       headers: {

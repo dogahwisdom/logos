@@ -95,6 +95,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
     }
   };
 
+  // Safety net so the UI never stays on "Processing..." (e.g. slow network or Supabase unreachable)
+  const AUTH_TIMEOUT_MS = 12_000;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || (!isLogin && !username)) {
@@ -104,17 +107,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
 
     setLoading(true);
 
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error("Sign-in is taking too long. Check your connection and try again.")),
+        AUTH_TIMEOUT_MS
+      );
+    });
+
     try {
       if (isLogin) {
-        // Sign In
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const authPromise = supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
         if (error) throw error;
 
-        if (data.user) {
+        if (data?.user) {
           const user: User = {
             id: data.user.id,
             username: data.user.user_metadata?.username || email.split('@')[0],
@@ -124,15 +131,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           onLogin(user);
         }
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const authPromise = supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: { username }
-          }
+          options: { data: { username } }
         });
+        const { data, error } = await Promise.race([authPromise, timeoutPromise]);
+
         if (error) throw error;
-        if (data.user) {
+        if (data?.user) {
           const user: User = {
             id: data.user.id,
             username,
@@ -142,14 +149,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           onLogin(user);
         }
       }
-    } catch (error: any) {
-      console.error("Auth Error:", error);
-      
-      // Network/config error: Supabase unreachable (e.g. placeholder or offline)
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error("Authentication failed");
+      console.error("Auth Error:", err);
+
       if (
-        error.message === "Failed to fetch" ||
-        error.message?.includes("Supabase URL") ||
-        error.message?.includes("apikey")
+        err.message === "Failed to fetch" ||
+        err.message?.includes("Supabase URL") ||
+        err.message?.includes("apikey")
       ) {
         console.warn("Supabase unreachable, using local sign-in.");
         setTimeout(() => {
@@ -161,7 +168,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           onLogin(user);
         }, 800);
       } else {
-        toast.error(error.message || "Authentication failed");
+        // Production-friendly messages for common Supabase errors
+        const msg = err.message || "Authentication failed";
+        const friendly =
+          msg.includes("Invalid login") || msg.includes("invalid_credentials")
+            ? "Invalid email or password."
+            : msg.includes("Email not confirmed")
+              ? "Please confirm your email (check your inbox) and try again."
+              : msg;
+        toast.error(friendly);
       }
     } finally {
       setLoading(false);
