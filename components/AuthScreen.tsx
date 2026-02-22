@@ -233,8 +233,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         }, 800);
       } else {
         const msg = err.message || "Authentication failed";
-        const friendly =
-          msg.includes("Invalid login") || msg.includes("invalid_credentials")
+        const isLockTimeout = msg.includes("LockManager") && msg.includes("timed out");
+        const friendly = isLockTimeout
+          ? "Sign-in timed out (auth lock). Close other tabs with this app, refresh the page, then try again."
+          : msg.includes("Invalid login") || msg.includes("invalid_credentials")
             ? "Invalid email or password."
             : msg.includes("Email not confirmed") || msg.includes("email_not_confirmed")
               ? "Your account isn’t confirmed yet. Use “Resend confirmation email” below, or ask the site admin to confirm your user in Supabase → Authentication → Users."

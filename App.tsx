@@ -112,23 +112,27 @@ export default function App() {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
           setPasswordRecoveryMode(true);
           return;
         }
-        if (session) {
+        if (!session) {
+          setUser(null);
+          setSessions([]);
+          setCurrentSessionId(null);
+          return;
+        }
+        // Defer async work so this callback returns immediately and releases the auth lock.
+        // Otherwise sign-in elsewhere can hit "LockManager lock timed out" (Supabase auth-js #762).
+        setTimeout(async () => {
           const me = await getMeFromSupabase();
           if (me) {
             setUser({ id: me.id, email: me.email, username: me.username });
             const list = await fetchSessionsFromSupabase();
             setSessions(list);
           }
-        } else {
-          setUser(null);
-          setSessions([]);
-          setCurrentSessionId(null);
-        }
+        }, 0);
       }
     );
     return () => subscription.unsubscribe();
