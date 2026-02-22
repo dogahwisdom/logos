@@ -147,7 +147,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           };
           onLogin(user);
         } else {
-          // Session might be in client but not in response; try once
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData.session?.user) {
             const u = sessionData.session.user;
@@ -157,6 +156,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
               email: u.email ?? email
             };
             onLogin(user);
+          } else {
+            toast.error("Sign in didn’t complete. Try again.");
           }
         }
       } else {
@@ -169,7 +170,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
 
         if (error) throw error;
         if (data?.user) {
-          // If session is null, Supabase requires email confirmation – don't log in yet
           if (data.session) {
             const user: User = {
               id: data.user.id,
@@ -178,9 +178,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             };
             setAccountCreatedUser(user);
           } else {
-            setEmailConfirmRequired(true);
-            setIsLogin(true);
+            // Session can be set shortly after sign up when confirm email is off; try once
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session?.user) {
+              const u = sessionData.session.user;
+              const user: User = {
+                id: u.id,
+                username: (u.user_metadata?.username as string) || username,
+                email: u.email ?? email
+              };
+              setAccountCreatedUser(user);
+            } else {
+              setEmailConfirmRequired(true);
+              setIsLogin(true);
+            }
           }
+        } else {
+          toast.error("Sign up did not complete. Try again or sign in if you already have an account.");
         }
       }
     } catch (error: unknown) {
@@ -202,15 +216,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           onLogin(user);
         }, 800);
       } else {
-        // Production-friendly messages for common Supabase errors
         const msg = err.message || "Authentication failed";
         const friendly =
           msg.includes("Invalid login") || msg.includes("invalid_credentials")
             ? "Invalid email or password."
             : msg.includes("Email not confirmed") || msg.includes("email_not_confirmed")
-              ? "Please confirm your email (check your inbox and spam), then sign in again."
-              : msg;
-        toast.error(friendly);
+              ? "Your account isn’t confirmed yet. Use “Resend confirmation email” below, or ask the site admin to confirm your user in Supabase → Authentication → Users."
+              : msg.includes("already registered") || msg.includes("already exists")
+                ? "An account with this email already exists. Sign in instead."
+                : msg;
+        toast.error(friendly, { duration: 6000 });
       }
     } finally {
       setLoading(false);
