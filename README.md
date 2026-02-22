@@ -124,13 +124,13 @@ To make **Sign in with Google** work with Supabase, configure both Google Cloud 
 
 After saving, **Sign in with Google** in the app will redirect to Google, then back to your app with the user signed in.
 
-### Email confirmation
+### Email confirmation (recommended)
 
-If **Confirm email** is enabled (Supabase → **Authentication** → **Providers** → **Email**), new users must click a link in their inbox before they can sign in. If they don’t receive the email:
+We recommend **enabling** “Confirm email” (Supabase → **Authentication** → **Providers** → **Email**). It verifies that users control their email, reduces fake signups, and ensures password reset and recovery work. The app supports it: after sign-up, users see a “Check your email” message and can use **Resend confirmation email** if needed.
 
-- They can use **Resend confirmation email** on the sign-in screen (after signing up).
-- Check **spam/junk** and wait a few minutes; Supabase has rate limits (e.g. a few emails per hour on free tier).
-- To skip confirmation entirely: in Supabase → **Authentication** → **Providers** → **Email**, turn **off** “Confirm email”. New sign-ups will be able to sign in immediately.
+- **Site URL** and **Redirect URLs** in Supabase must include your app URL so the confirmation link lands on your site.
+- If users don’t see the email: check **spam/junk**, wait a few minutes (Supabase has rate limits on the free tier), or use **Resend confirmation email** on the sign-in screen.
+- To disable (e.g. for a quick internal test): turn **off** “Confirm email” in the same Email provider settings. New sign-ups can then sign in immediately without clicking a link.
 
 ## Project structure
 

@@ -21,7 +21,7 @@ CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id);
 
--- Auto-create profile on signup
+-- Auto-create profile on signup (idempotent so signup never fails due to profile insert)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -30,7 +30,11 @@ BEGIN
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
     NEW.email
-  );
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    username = COALESCE(EXCLUDED.username, public.profiles.username),
+    email = COALESCE(EXCLUDED.email, public.profiles.email),
+    updated_at = NOW();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

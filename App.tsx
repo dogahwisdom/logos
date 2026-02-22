@@ -45,10 +45,13 @@ export default function App() {
     const initSupabase = async (): Promise<boolean> => {
       if (!isSupabaseConfigured()) return false;
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return false;
-      const me = await getMeFromSupabase();
-      if (!me) return false;
-      setUser({ id: me.id, email: me.email, username: me.username });
+      if (!session?.user) return false;
+      const u = session.user;
+      setUser({
+        id: u.id,
+        email: u.email ?? '',
+        username: (u.user_metadata?.username as string) ?? u.email?.split('@')[0] ?? 'User',
+      });
       const list = await fetchSessionsFromSupabase();
       setSessions(list);
       return true;

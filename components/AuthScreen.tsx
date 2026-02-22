@@ -28,7 +28,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
     if (!email?.trim() || !isSupabaseConfigured()) return;
     setResendLoading(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase() });
       if (error) throw error;
       toast.success('Confirmation email sent. Check your inbox and spam folder.');
     } catch (err: unknown) {
@@ -100,7 +100,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: window.location.origin
       });
       if (error) throw error;
@@ -120,7 +120,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    if (!email || !password || (!isLogin && !username)) {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedUsername = username.trim();
+    if (!trimmedEmail || !password || (!isLogin && !trimmedUsername)) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -136,7 +138,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
 
     try {
       if (isLogin) {
-        const authPromise = supabase.auth.signInWithPassword({ email, password });
+        const authPromise = supabase.auth.signInWithPassword({ email: trimmedEmail, password });
         const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
         if (error) throw error;
@@ -144,8 +146,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         if (data?.user) {
           const user: User = {
             id: data.user.id,
-            username: data.user.user_metadata?.username || email.split('@')[0],
-            email: data.user.email || email
+            username: data.user.user_metadata?.username || trimmedEmail.split('@')[0],
+            email: data.user.email || trimmedEmail
           };
           onLogin(user);
         } else {
@@ -155,7 +157,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
             const user: User = {
               id: u.id,
               username: (u.user_metadata?.username as string) || u.email?.split('@')[0] || 'User',
-              email: u.email ?? email
+              email: u.email ?? trimmedEmail
             };
             onLogin(user);
           } else {
@@ -164,9 +166,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         }
       } else {
         const authPromise = supabase.auth.signUp({
-          email,
+          email: trimmedEmail,
           password,
-          options: { data: { username } }
+          options: {
+            data: { username: trimmedUsername },
+            emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+          }
         });
         const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
@@ -178,19 +183,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           if (data.session) {
             const user: User = {
               id: data.user.id,
-              username,
-              email
+              username: trimmedUsername,
+              email: trimmedEmail
             };
             setAccountCreatedUser(user);
           } else {
-            // Session can be set shortly after sign up when confirm email is off; try once
+            // Session can be set shortly after sign up when confirm email is off; try once with short delay
+            await new Promise(r => setTimeout(r, 400));
             const { data: sessionData } = await supabase.auth.getSession();
             if (sessionData.session?.user) {
               const u = sessionData.session.user;
               const user: User = {
                 id: u.id,
-                username: (u.user_metadata?.username as string) || username,
-                email: u.email ?? email
+                username: (u.user_metadata?.username as string) || trimmedUsername,
+                email: u.email ?? trimmedEmail
               };
               setAccountCreatedUser(user);
             } else {
@@ -219,8 +225,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         console.warn("Supabase unreachable, using local sign-in.");
         setTimeout(() => {
           const user: User = {
-            username: isLogin ? email.split('@')[0] : username,
-            email: email
+            username: isLogin ? trimmedEmail.split('@')[0] : trimmedUsername,
+            email: trimmedEmail
           };
           toast.success(isLogin ? "Welcome back." : "Account created. Connect Supabase to sync your data.");
           onLogin(user);
