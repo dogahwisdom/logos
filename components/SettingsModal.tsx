@@ -155,12 +155,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowApiKey((v) => !v)}
-                    className={`mt-1.5 text-xs font-medium underline focus:outline-none focus:no-underline ${
-                      isDark ? 'text-orange-400 hover:text-orange-300' : 'text-orange-600 hover:text-orange-700'
+                    className={`mt-2 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                      isDark
+                        ? 'border-zinc-600 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-500'
+                        : 'border-zinc-300 text-zinc-700 hover:bg-zinc-100 hover:border-zinc-400'
                     }`}
                     aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
                   >
-                    {showApiKey ? 'Hide API key' : 'Show API key'}
+                    <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
+                    <span>{showApiKey ? 'Hide API key' : 'Show API key'}</span>
                   </button>
                 </div>
                 <div>
@@ -212,7 +215,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           toast.success("Connection successful. Click Save settings below to keep your changes.", { id: toastId, duration: 4000 });
                         } else {
                           const err = await response.json().catch(() => ({}));
-                          const msg = (err as { error?: string })?.error ?? response.statusText || `HTTP ${response.status}`;
+                          const msg = (err as { error?: string })?.error ?? (response.statusText || `HTTP ${response.status}`);
                           toast.error(`Connection failed: ${msg}`, { id: toastId, duration: 5000 });
                         }
                      } catch (e) {

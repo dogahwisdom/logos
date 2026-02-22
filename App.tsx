@@ -142,15 +142,20 @@ export default function App() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    if (user?.id && isSupabaseConfigured()) {
-      await supabase.auth.signOut();
+    try {
+      if (isSupabaseConfigured()) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    } finally {
+      setUser(null);
+      setSessions([]);
+      setCurrentSessionId(null);
+      localStorage.removeItem('logos_user');
+      localStorage.removeItem('logos_sessions');
     }
-    setUser(null);
-    setSessions([]);
-    setCurrentSessionId(null);
-    localStorage.removeItem('logos_user');
-    localStorage.removeItem('logos_sessions');
-  }, [user?.id]);
+  }, []);
 
   const handleNewSession = useCallback(async (session: AnalysisSession) => {
     if (isSupabaseConfigured() && user?.id) {

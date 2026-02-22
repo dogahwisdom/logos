@@ -204,7 +204,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
              <div className={`h-px ${isDark ? 'bg-zinc-800' : 'bg-zinc-200'}`}></div>
 
              <div className="p-1">
-               <button 
+               <button
+                 type="button"
                  onClick={() => { setIsMenuOpen(false); onOpenSettings(); }}
                  className={`w-full flex items-center gap-2 px-2 py-2 text-sm rounded-lg transition-colors ${
                     isDark 
@@ -220,15 +221,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
              <div className={`h-px ${isDark ? 'bg-zinc-800' : 'bg-zinc-200'}`}></div>
 
              <div className="p-1">
-               <button 
-                 onClick={onLogout}
+               <button
+                 type="button"
+                 onClick={() => {
+                   setIsMenuOpen(false);
+                   onLogout();
+                 }}
                  className={`w-full flex items-center gap-2 px-2 py-2 text-sm rounded-lg transition-colors group ${
                     isDark 
                       ? 'text-red-400 hover:bg-red-900/20' 
                       : 'text-red-600 hover:bg-red-50'
                  }`}
                >
-                 <i className="fas fa-sign-out-alt w-5 text-center text-xs opacity-70 group-hover:opacity-100"></i> 
+                 <i className="fas fa-sign-out-alt w-5 text-center text-xs opacity-70 group-hover:opacity-100" aria-hidden />
                  Log out
                </button>
              </div>

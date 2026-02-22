@@ -91,6 +91,7 @@ With **Supabase**, you only deploy the frontend (Netlify) and the Edge Function 
    - `VITE_SUPABASE_URL` = your Supabase project URL (e.g. `https://xxx.supabase.co`)
    - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
 4. **Deploy.** The app will use Supabase for auth, sessions, and paper analysis (Edge Function). No `VITE_API_URL` or separate backend needed.
+5. **If updates don’t appear:** In Netlify → **Deploys**, use **Trigger deploy** → **Clear cache and deploy site**. In the browser, do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) to avoid cached JS.
 
 ## Google sign-in setup
 
