@@ -135,39 +135,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>API Key</label>
-                  <div className="relative">
-                    <input 
-                      type={showApiKey ? 'text' : 'password'}
-                      value={settings.customModelConfig?.apiKey || ''}
-                      onChange={(e) => onUpdateSettings({ 
-                        ...settings, 
-                        customModelConfig: { 
-                          ...settings.customModelConfig, 
-                          baseUrl: settings.customModelConfig?.baseUrl || '',
-                          apiKey: e.target.value,
-                          modelName: settings.customModelConfig?.modelName || ''
-                        } 
-                      })}
-                      placeholder="sk-... or your API key"
-                      className={`w-full px-3 py-2 pr-24 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
-                        isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey((v) => !v)}
-                      className={`absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium border transition-colors ${
-                        isDark
-                          ? 'border-zinc-600 text-zinc-300 hover:text-white hover:bg-zinc-700 hover:border-zinc-500'
-                          : 'border-zinc-300 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-                      }`}
-                      aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                      title={showApiKey ? 'Hide key' : 'Show key'}
-                    >
-                      <i className={`fas ${showApiKey ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden />
-                      <span>{showApiKey ? 'Hide' : 'Show'}</span>
-                    </button>
-                  </div>
+                  <input 
+                    type={showApiKey ? 'text' : 'password'}
+                    value={settings.customModelConfig?.apiKey || ''}
+                    onChange={(e) => onUpdateSettings({ 
+                      ...settings, 
+                      customModelConfig: { 
+                        ...settings.customModelConfig, 
+                        baseUrl: settings.customModelConfig?.baseUrl || '',
+                        apiKey: e.target.value,
+                        modelName: settings.customModelConfig?.modelName || ''
+                      } 
+                    })}
+                    placeholder="sk-... or your API key"
+                    className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${
+                      isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey((v) => !v)}
+                    className={`mt-1.5 text-xs font-medium underline focus:outline-none focus:no-underline ${
+                      isDark ? 'text-orange-400 hover:text-orange-300' : 'text-orange-600 hover:text-orange-700'
+                    }`}
+                    aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                  >
+                    {showApiKey ? 'Hide API key' : 'Show API key'}
+                  </button>
                 </div>
                 <div>
                   <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Model Name</label>
