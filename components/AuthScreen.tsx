@@ -129,6 +129,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
           };
           toast.success("Welcome back to LOGOS.");
           onLogin(user);
+        } else {
+          // Session might be in client but not in response; try once
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session?.user) {
+            const u = sessionData.session.user;
+            const user: User = {
+              id: u.id,
+              username: (u.user_metadata?.username as string) || u.email?.split('@')[0] || 'User',
+              email: u.email ?? email
+            };
+            toast.success("Welcome back to LOGOS.");
+            onLogin(user);
+          }
         }
       } else {
         const authPromise = supabase.auth.signUp({
@@ -140,13 +153,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
 
         if (error) throw error;
         if (data?.user) {
-          const user: User = {
-            id: data.user.id,
-            username,
-            email
-          };
-          toast.success("Account created successfully.");
-          onLogin(user);
+          // If session is null, Supabase requires email confirmation – don't log in yet
+          if (data.session) {
+            const user: User = {
+              id: data.user.id,
+              username,
+              email
+            };
+            toast.success("Account created successfully.");
+            onLogin(user);
+          } else {
+            toast.success("Check your email to confirm your account, then sign in.", { duration: 6000 });
+            setIsLogin(true);
+          }
         }
       }
     } catch (error: unknown) {
@@ -173,8 +192,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, theme = 'dark' 
         const friendly =
           msg.includes("Invalid login") || msg.includes("invalid_credentials")
             ? "Invalid email or password."
-            : msg.includes("Email not confirmed")
-              ? "Please confirm your email (check your inbox) and try again."
+            : msg.includes("Email not confirmed") || msg.includes("email_not_confirmed")
+              ? "Please confirm your email (check your inbox and spam), then sign in again."
               : msg;
         toast.error(friendly);
       }
