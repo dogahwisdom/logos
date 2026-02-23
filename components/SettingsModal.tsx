@@ -166,7 +166,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         type={isGemini ? (showGeminiKey ? 'text' : 'password') : (showApiKey ? 'text' : 'password')}
                         value={config.apiKey}
                         onChange={(e) => updateConfig({ apiKey: e.target.value })}
-                        placeholder={isGemini ? 'Optional — leave blank for project key' : 'Your API key'}
+                        placeholder="Your API key"
                         className={`w-full px-3 py-2 pr-10 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'}`}
                       />
                       <button type="button" onClick={() => (isGemini ? setShowGeminiKey((v) => !v) : setShowApiKey((v) => !v))} className={`absolute inset-y-0 right-0 flex items-center justify-center w-9 text-sm focus:outline-none rounded-r ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'}`} aria-label="Show or hide API key">
