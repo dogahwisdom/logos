@@ -199,7 +199,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
                               body: JSON.stringify({ model: config.modelName, messages: [{ role: 'user', content: 'Hello' }], temperature: 0.7 }),
                             });
-                            if (res.ok) toast.success("Connection successful. Save settings to keep changes.", { id: toastId, duration: 4000 });
+                            if (res.ok) toast.success("Connection verified.", { id: toastId, duration: 2500 });
                             else {
                               const err = await res.json().catch(() => ({}));
                               toast.error(`Connection failed: ${(err as { error?: string })?.error ?? res.statusText}`, { id: toastId, duration: 5000 });

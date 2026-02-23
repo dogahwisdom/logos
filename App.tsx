@@ -260,13 +260,27 @@ export default function App() {
 
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${settings.theme === 'light' ? 'bg-zinc-50 text-zinc-900' : 'bg-zinc-950 text-zinc-200'}`}>
-      <Toaster position="bottom-right" toastOptions={{
-        style: {
-          background: settings.theme === 'light' ? '#fff' : '#27272a',
-          color: settings.theme === 'light' ? '#18181b' : '#e4e4e7',
-          border: `1px solid ${settings.theme === 'light' ? '#e4e4e7' : '#3f3f46'}`
-        }
-      }}/>
+      <Toaster
+        position="bottom-right"
+        gutter={16}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: settings.theme === 'light' ? '#fff' : '#27272a',
+            color: settings.theme === 'light' ? '#18181b' : '#e4e4e7',
+            border: `1px solid ${settings.theme === 'light' ? '#e4e4e7' : '#3f3f46'}`,
+            borderRadius: '10px',
+            padding: '14px 18px',
+            boxShadow: settings.theme === 'light' ? '0 4px 12px rgba(0,0,0,0.08)' : '0 4px 24px rgba(0,0,0,0.4)',
+          },
+          success: {
+            iconTheme: { primary: '#22c55e', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
+          },
+        }}
+      />
       
       {/* Mobile sidebar backdrop: tap outside to close */}
       {isSidebarOpen && (
