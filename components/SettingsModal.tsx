@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppSettings, type ReasoningProvider } from '../types';
 import { getChatCompletionsUrl } from '../services/customAiService';
 import { REASONING_PROVIDERS, PROVIDER_ORDER, getBaseUrlForProvider } from '../config/reasoningProviders';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface SettingsModalProps {
@@ -184,34 +185,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className={`w-full px-3 py-2 rounded border text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 ${isDark ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-300 text-zinc-900'}`}
                     />
                   </div>
-                  {!isGemini && (
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const toastId = toast.loading("Testing connection...");
-                          try {
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const toastId = toast.loading("Testing connection...");
+                        try {
+                          if (isGemini) {
+                            if (!isSupabaseConfigured()) {
+                              toast.error("Supabase is required to test Gemini.", { id: toastId, duration: 4000 });
+                              return;
+                            }
+                            const { data, error } = await supabase.functions.invoke('analyze-paper', {
+                              body: {
+                                paperText: "Test connection.",
+                                temperature: 0.7,
+                                ...(config.apiKey?.trim() && { geminiApiKey: config.apiKey.trim() }),
+                                ...(config.modelName?.trim() && { model: config.modelName.trim() }),
+                              },
+                            });
+                            if (error) throw new Error(error.message);
+                            const errMsg = typeof (data as { error?: string })?.error === 'string' ? (data as { error: string }).error : null;
+                            if (errMsg) throw new Error(errMsg);
+                            toast.success("Connection verified.", { id: toastId, duration: 2500 });
+                          } else {
                             const baseUrl = getBaseUrlForProvider(provider, config.baseUrl);
                             const url = getChatCompletionsUrl(baseUrl);
                             if (!url) { toast.error("Enter a Base URL first (Custom).", { id: toastId }); return; }
+                            if (!config.apiKey?.trim()) { toast.error("Enter your API key.", { id: toastId }); return; }
+                            if (!config.modelName?.trim()) { toast.error("Enter a model name.", { id: toastId }); return; }
+                            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                            if (provider === 'anthropic') {
+                              headers['x-api-key'] = config.apiKey;
+                              headers['anthropic-version'] = '2023-06-01';
+                            } else {
+                              headers['Authorization'] = `Bearer ${config.apiKey}`;
+                            }
                             const res = await fetch(url, {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+                              headers,
                               body: JSON.stringify({ model: config.modelName, messages: [{ role: 'user', content: 'Hello' }], temperature: 0.7 }),
                             });
                             if (res.ok) toast.success("Connection verified.", { id: toastId, duration: 2500 });
                             else {
                               const err = await res.json().catch(() => ({}));
-                              toast.error(`Connection failed: ${(err as { error?: string })?.error ?? res.statusText}`, { id: toastId, duration: 5000 });
+                              const msg = (err as { error?: { message?: string }; message?: string })?.error?.message ?? (err as { error?: string })?.error ?? (err as { message?: string })?.message ?? res.statusText;
+                              toast.error(`Connection failed: ${msg}`, { id: toastId, duration: 5000 });
                             }
-                          } catch (e) { toast.error(e instanceof Error ? e.message : "Connection failed.", { id: toastId, duration: 5000 }); }
-                        }}
-                        className={`text-xs px-3 py-1 rounded border ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-300 text-zinc-700 hover:bg-zinc-200'}`}
-                      >
-                        <i className="fas fa-plug mr-1" aria-hidden /> Test Connection
-                      </button>
-                    </div>
-                  )}
+                          }
+                        } catch (e) { toast.error(e instanceof Error ? e.message : "Connection failed.", { id: toastId, duration: 5000 }); }
+                      }}
+                      className={`text-xs px-3 py-1 rounded border ${isDark ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700' : 'bg-zinc-100 border-zinc-300 text-zinc-700 hover:bg-zinc-200'}`}
+                    >
+                      <i className="fas fa-plug mr-1" aria-hidden /> Test Connection
+                    </button>
+                  </div>
                 </div>
               );
             })()}

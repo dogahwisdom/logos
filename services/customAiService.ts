@@ -20,6 +20,15 @@ export function getChatCompletionsUrl(baseUrl: string): string {
   return `${base}/chat/completions`;
 }
 
+/** Auth headers: Anthropic uses x-api-key; others use Authorization Bearer. */
+function getAuthHeaders(baseUrl: string, apiKey: string): Record<string, string> {
+  const isAnthropic = /anthropic\.com/i.test(baseUrl);
+  if (isAnthropic) {
+    return { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
+  }
+  return { 'Authorization': `Bearer ${apiKey}` };
+}
+
 export const analyzePaperWithCustomAI = async (
   paperText: string, 
   config: CustomAIConfig,
@@ -82,7 +91,7 @@ export const analyzePaperWithCustomAI = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`
+        ...getAuthHeaders(config.baseUrl, config.apiKey),
       },
       body: JSON.stringify({
         model: config.modelName,
