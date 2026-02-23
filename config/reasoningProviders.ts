@@ -4,7 +4,7 @@ export interface ProviderMeta {
   label: string;
   baseUrl: string;
   modelPlaceholder: string;
-  /** Gemini uses Edge Function; others use OpenAI-compatible client. */
+  /** Gemini uses direct Google API from client; others use OpenAI-compatible client. */
   useNativeGemini: boolean;
 }
 

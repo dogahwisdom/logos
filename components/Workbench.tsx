@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AnalysisSession, AnalysisResult, AppState, AppSettings } from '../types';
 import { extractTextFromPdf } from '../services/pdfService';
 import { analyzePaperWithCustomAI } from '../services/customAiService';
-import { analyzePaperViaSupabase } from '../services/analyzePaperSupabase';
+import { analyzePaperWithGemini } from '../services/geminiClientService';
 import { isSupabaseConfigured } from '../services/supabase';
 import type { AnalysisResult } from '../types';
 import { apiBase } from '../config/env';
@@ -104,11 +104,16 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
       const provider = settings.reasoningProvider ?? (settings.modelProvider === 'gemini' ? 'gemini' : 'custom');
       const config = settings.reasoningConfig ?? (provider === 'gemini' ? settings.geminiConfig : settings.customModelConfig) ?? { baseUrl: '', apiKey: '', modelName: '' };
 
-      if (provider === 'gemini' && isSupabaseConfigured()) {
-        result = await analyzePaperViaSupabase(text, settings.temperature, {
-          geminiApiKey: config.apiKey,
-          model: config.modelName,
-        });
+      if (provider === 'gemini') {
+        if (!config.apiKey?.trim()) {
+          throw new Error('Add your Gemini API key in Settings → Reasoning Engine → Google Gemini.');
+        }
+        result = await analyzePaperWithGemini(
+          text,
+          config.apiKey,
+          config.modelName?.trim() || 'gemini-2.0-flash',
+          settings.temperature
+        );
       } else {
         const baseUrl = getBaseUrlForProvider(provider, config.baseUrl);
         if (provider === 'custom' && !baseUrl) {
@@ -117,18 +122,18 @@ export const Workbench: React.FC<WorkbenchProps> = ({ initialSession, onAnalysis
         if (baseUrl) {
           result = await analyzePaperWithCustomAI(text, { baseUrl, apiKey: config.apiKey, modelName: config.modelName }, settings.temperature);
         } else if (isSupabaseConfigured()) {
-          result = await analyzePaperViaSupabase(text, settings.temperature, { geminiApiKey: config.apiKey, model: config.modelName });
-        } else {
-        const resp = await fetch(`${apiBase}/api/analyze`, {
+          const resp = await fetch(`${apiBase}/api/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paperText: text, temperature: settings.temperature })
+            body: JSON.stringify({ paperText: text, temperature: settings.temperature }),
           });
           if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            throw new Error(err.error || 'Analysis request failed');
+            throw new Error((err as { error?: string })?.error || 'Analysis request failed');
           }
           result = (await resp.json()) as AnalysisResult;
+        } else {
+          throw new Error('Configure a reasoning provider in Settings (e.g. Gemini API key or Custom API).');
         }
       }
 

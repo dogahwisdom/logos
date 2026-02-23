@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, type ReasoningProvider } from '../types';
 import { getChatCompletionsUrl } from '../services/customAiService';
+import { testGeminiConnection } from '../services/geminiClientService';
 import { REASONING_PROVIDERS, PROVIDER_ORDER, getBaseUrlForProvider } from '../config/reasoningProviders';
-import { supabase, isSupabaseConfigured } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface SettingsModalProps {
@@ -192,21 +192,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         const toastId = toast.loading("Testing connection...");
                         try {
                           if (isGemini) {
-                            if (!isSupabaseConfigured()) {
-                              toast.error("Supabase is required to test Gemini.", { id: toastId, duration: 4000 });
-                              return;
-                            }
-                            const { data, error } = await supabase.functions.invoke('analyze-paper', {
-                              body: {
-                                paperText: "Test connection.",
-                                temperature: 0.7,
-                                ...(config.apiKey?.trim() && { geminiApiKey: config.apiKey.trim() }),
-                                ...(config.modelName?.trim() && { model: config.modelName.trim() }),
-                              },
-                            });
-                            if (error) throw new Error(error.message);
-                            const errMsg = typeof (data as { error?: string })?.error === 'string' ? (data as { error: string }).error : null;
-                            if (errMsg) throw new Error(errMsg);
+                            await testGeminiConnection(config.apiKey ?? '', config.modelName ?? 'gemini-2.0-flash');
                             toast.success("Connection verified.", { id: toastId, duration: 2500 });
                           } else {
                             const baseUrl = getBaseUrlForProvider(provider, config.baseUrl);
