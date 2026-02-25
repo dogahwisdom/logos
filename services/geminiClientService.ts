@@ -23,31 +23,45 @@ You must return exactly this JSON schema:
   "simulation_data": [{"x": number, "y": number}]
 }
 
+You must wrap your final, completed JSON object inside strict custom tags like this:
+<FINAL_JSON>
+{ ... }
+</FINAL_JSON>
+Do not put any other text inside these tags.
+
 Paper Text:
 `;
 
 function parseGeminiResponse(rawText: string): AnalysisResult {
   let parsed: any;
   try {
-    // 1. Remove <think> tags and their contents (critical for reasoning models)
-    let cleanText = rawText.replace(/<think>[\s\S]*?<\/think>/g, '');
+    // Look for the custom tags we instructed the LLM to use
+    const startTag = "<FINAL_JSON>";
+    const endTag = "</FINAL_JSON>";
 
-    // 2. Remove markdown formatting
-    cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '');
-
-    // 3. Extract the JSON object
-    const startIndex = cleanText.indexOf('{');
-    const endIndex = cleanText.lastIndexOf('}');
+    const startIndex = rawText.indexOf(startTag);
+    const endIndex = rawText.indexOf(endTag);
 
     if (startIndex !== -1 && endIndex !== -1) {
-      const jsonString = cleanText.substring(startIndex, endIndex + 1);
+      // Extract everything between the tags
+      let jsonString = rawText.substring(startIndex + startTag.length, endIndex).trim();
+
+      // Safety check: strip markdown if it snuck inside the tags
+      jsonString = jsonString.replace(/```json/gi, '').replace(/```/g, '').trim();
+
       parsed = JSON.parse(jsonString);
     } else {
-      throw new Error("No JSON brackets found in response");
+      // Fallback if the model forgot the tags (regex for the largest JSON block)
+      const jsonBlockMatch = rawText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonBlockMatch && jsonBlockMatch[1]) {
+        parsed = JSON.parse(jsonBlockMatch[1]);
+      } else {
+        throw new Error("Could not find <FINAL_JSON> tags or valid markdown block");
+      }
     }
   } catch (error) {
     console.error("Failed to parse JSON:", error);
-    console.log("Raw Response was:", rawText);
+    console.log("Raw Response snippet:", rawText.substring(0, 500) + "...");
     throw new Error("Failed to parse analysis JSON. The model generated invalid JSON.");
   }
 
