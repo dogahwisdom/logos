@@ -12,6 +12,14 @@ Your task is to:
 6. Assign a "Reproducibility Score" (0-100).
 7. Assess "Citation Integrity".
 
+CRITICAL DATA GENERATION RULES: 
+When generating the \`simulation_data\` array for the 'Data Robustness Test', you MUST obey statistical reality. 
+- The 'x' value represents 'Noise Standard Deviation' (starting at 0.0 and increasing).
+- The 'y' value represents 'Model R-Squared Score' (maximum 1.0).
+- As 'x' (noise) INCREASES, 'y' (accuracy) MUST DECREASE. 
+- Start the first data point with 'y' around 0.90 to 0.99 (high accuracy, zero noise). 
+- Progressively and smoothly degrade the 'y' values as 'x' grows, simulating a model breaking down under stress. Never show 'y' increasing as 'x' increases.
+
 You must return exactly this JSON schema:
 {
   "methodology_summary": "string",
