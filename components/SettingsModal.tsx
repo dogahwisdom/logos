@@ -124,11 +124,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     key={p}
                     type="button"
-                    onClick={() => onUpdateSettings({
-                      ...settings,
-                      reasoningProvider: p,
-                      reasoningConfig: settings.reasoningConfig ?? { baseUrl: '', apiKey: '', modelName: '' },
-                    })}
+                    onClick={() => {
+                      let newBaseUrl = settings.reasoningConfig?.baseUrl ?? '';
+                      if (['openai', 'gemini', 'anthropic', 'groq', 'together'].includes(p)) {
+                        newBaseUrl = '';
+                      } else if (p === 'k2') {
+                        newBaseUrl = 'https://api.k2think.ai/v1';
+                      } else if (p === 'custom') {
+                        newBaseUrl = '';
+                      }
+                      onUpdateSettings({
+                        ...settings,
+                        reasoningProvider: p,
+                        reasoningConfig: {
+                          ...(settings.reasoningConfig ?? { apiKey: '', modelName: '' }),
+                          baseUrl: newBaseUrl
+                        },
+                      });
+                    }}
                     className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
                       isActive ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500' : isDark ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:border-zinc-300'
                     }`}
@@ -143,7 +156,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               const config = settings.reasoningConfig ?? { baseUrl: '', apiKey: '', modelName: '' };
               const meta = provider !== 'custom' ? REASONING_PROVIDERS[provider] : null;
               const isGemini = provider === 'gemini';
-              const showBaseUrl = provider === 'custom';
+              const showBaseUrl = ['custom', 'k2'].includes(provider);
               const updateConfig = (partial: Partial<typeof config>) =>
                 onUpdateSettings({ ...settings, reasoningConfig: { ...config, ...partial } });
               return (
