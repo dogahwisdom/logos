@@ -15,6 +15,23 @@ import {
   getMeFromSupabase
 } from './services/sessionsSupabase';
 
+const DEFAULT_PROVIDER_CONFIGS = {
+  gemini: { apiKey: '', modelName: 'gemini-2.0-flash', baseUrl: '' },
+  k2: { apiKey: '', modelName: 'MBZUAI-IFM/K2-Think-v2', baseUrl: 'https://api.k2think.ai/v1' },
+  groq: { apiKey: '', modelName: 'llama-3.3-70b-versatile', baseUrl: '' },
+  openai: { apiKey: '', modelName: 'gpt-4o', baseUrl: '' },
+  anthropic: { apiKey: '', modelName: 'claude-3-5-sonnet-latest', baseUrl: '' },
+  together: { apiKey: '', modelName: '', baseUrl: 'https://api.together.xyz/v1' },
+  custom: { apiKey: '', modelName: '', baseUrl: '' },
+};
+
+const DEFAULT_SETTINGS: AppSettings = {
+  temperature: 0.7,
+  theme: 'dark',
+  reasoningProvider: 'gemini',
+  providerConfigs: DEFAULT_PROVIDER_CONFIGS,
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [sessions, setSessions] = useState<AnalysisSession[]>([]);
@@ -23,20 +40,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [authReady, setAuthReady] = useState(false);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
-  const [settings, setSettings] = useState<AppSettings>({
-    temperature: 0.7,
-    theme: 'dark',
-    reasoningProvider: 'gemini',
-    providerConfigs: {
-      gemini: { apiKey: '', modelName: 'gemini-2.0-flash', baseUrl: '' },
-      k2: { apiKey: '', modelName: 'MBZUAI-IFM/K2-Think-v2', baseUrl: 'https://api.k2think.ai/v1' },
-      groq: { apiKey: '', modelName: 'llama-3.3-70b-versatile', baseUrl: '' },
-      openai: { apiKey: '', modelName: 'gpt-4o', baseUrl: '' },
-      anthropic: { apiKey: '', modelName: 'claude-3-5-sonnet-latest', baseUrl: '' },
-      together: { apiKey: '', modelName: '', baseUrl: 'https://api.together.xyz/v1' },
-      custom: { apiKey: '', modelName: '', baseUrl: '' },
-    },
-  });
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
   // Restore session from Supabase or localStorage (with timeout so desktop never hangs)
   useEffect(() => {
@@ -63,52 +67,7 @@ export default function App() {
 
     const init = async () => {
       try {
-        const storedSettings = localStorage.getItem('logos_settings');
-        if (storedSettings) {
-          try {
-            const parsed = JSON.parse(storedSettings);
-            let provider = parsed.reasoningProvider ?? (parsed.modelProvider === 'gemini' ? 'gemini' : 'custom');
-
-            // Default provider configurations
-            const defaultConfigs = {
-              gemini: { apiKey: '', modelName: 'gemini-2.0-flash', baseUrl: '' },
-              k2: { apiKey: '', modelName: 'MBZUAI-IFM/K2-Think-v2', baseUrl: 'https://api.k2think.ai/v1' },
-              groq: { apiKey: '', modelName: 'llama-3.3-70b-versatile', baseUrl: '' },
-              openai: { apiKey: '', modelName: 'gpt-4o', baseUrl: '' },
-              anthropic: { apiKey: '', modelName: 'claude-3-5-sonnet-latest', baseUrl: '' },
-              together: { apiKey: '', modelName: '', baseUrl: 'https://api.together.xyz/v1' },
-              custom: { apiKey: '', modelName: '', baseUrl: '' },
-            };
-
-            let providerConfigs = parsed.providerConfigs;
-
-            // Migration logic: If user hasn't migrated to providerConfigs yet
-            if (!providerConfigs) {
-              providerConfigs = { ...defaultConfigs };
-
-              // Move legacy config into the appropriate provider
-              const legacyConfig = parsed.reasoningConfig ?? (provider === 'gemini'
-                ? { baseUrl: '', apiKey: parsed.geminiConfig?.apiKey ?? '', modelName: parsed.geminiConfig?.modelName ?? 'gemini-2.0-flash' }
-                : { baseUrl: parsed.customModelConfig?.baseUrl ?? '', apiKey: parsed.customModelConfig?.apiKey ?? '', modelName: parsed.customModelConfig?.modelName ?? '' });
-
-              if (providerConfigs[provider]) {
-                providerConfigs[provider] = legacyConfig;
-              }
-            } else {
-              // Ensure all default keys exist in case new ones were added
-              providerConfigs = { ...defaultConfigs, ...providerConfigs };
-            }
-
-            setSettings(prev => ({
-              ...prev,
-              ...parsed,
-              reasoningProvider: provider,
-              providerConfigs,
-            }));
-          } catch {
-            /* ignore */
-          }
-        }
+        // Settings are now loaded in a separate useEffect that watches user state
 
         const completed = await Promise.race([
           initSupabase(),
@@ -144,6 +103,58 @@ export default function App() {
     };
     init();
   }, []);
+
+  // Load and migrate settings whenever auth state changes
+  useEffect(() => {
+    if (!authReady) return;
+
+    const userId = user?.id || 'guest';
+    const scopedKey = `logos_settings_${userId}`;
+
+    let storedSettings = localStorage.getItem(scopedKey);
+
+    // One-time migration: If scoped key doesn't exist, try falling back to legacy global key
+    if (!storedSettings) {
+      storedSettings = localStorage.getItem('logos_settings');
+      if (storedSettings) {
+        localStorage.setItem(scopedKey, storedSettings);
+      }
+    }
+
+    if (storedSettings) {
+      try {
+        const parsed = JSON.parse(storedSettings);
+        let provider = parsed.reasoningProvider ?? (parsed.modelProvider === 'gemini' ? 'gemini' : 'custom');
+
+        let providerConfigs = parsed.providerConfigs;
+        if (!providerConfigs) {
+          providerConfigs = { ...DEFAULT_PROVIDER_CONFIGS };
+          const legacyConfig = parsed.reasoningConfig ?? (provider === 'gemini'
+            ? { baseUrl: '', apiKey: parsed.geminiConfig?.apiKey ?? '', modelName: parsed.geminiConfig?.modelName ?? 'gemini-2.0-flash' }
+            : { baseUrl: parsed.customModelConfig?.baseUrl ?? '', apiKey: parsed.customModelConfig?.apiKey ?? '', modelName: parsed.customModelConfig?.modelName ?? '' });
+
+          if (providerConfigs[provider]) {
+            providerConfigs[provider] = legacyConfig;
+          }
+        } else {
+          providerConfigs = { ...DEFAULT_PROVIDER_CONFIGS, ...providerConfigs };
+        }
+
+        setSettings(prev => ({
+          ...prev,
+          ...parsed,
+          reasoningProvider: provider,
+          providerConfigs,
+        }));
+      } catch {
+        // Fallback on error
+        setSettings(DEFAULT_SETTINGS);
+      }
+    } else {
+      // Ensure settings are scrubbed if no config exists for this user
+      setSettings(DEFAULT_SETTINGS);
+    }
+  }, [user?.id, authReady]);
 
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -193,10 +204,13 @@ export default function App() {
       console.warn('Sign out error:', e);
     } finally {
       setUser(null);
+      setSettings(DEFAULT_SETTINGS);
       setSessions([]);
       setCurrentSessionId(null);
       localStorage.removeItem('logos_user');
       localStorage.removeItem('logos_sessions');
+      // Intentionally do not clear the user's specific settings key so it remains for their next login,
+      // but state ensures the next user doesn't see it since we default settings here and on re-render.
     }
   }, []);
 
@@ -254,7 +268,8 @@ export default function App() {
 
   const handleUpdateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
-    localStorage.setItem('logos_settings', JSON.stringify(newSettings));
+    const userId = user?.id || 'guest';
+    localStorage.setItem(`logos_settings_${userId}`, JSON.stringify(newSettings));
   };
 
   const handleSelectSession = (id: string) => {
