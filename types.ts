@@ -43,9 +43,14 @@ export interface AppSettings {
   temperature: number;
   theme: 'dark' | 'light';
   reasoningProvider: ReasoningProvider;
-  /** API key and model for the selected provider. For custom, baseUrl is also stored here. */
-  reasoningConfig: {
-    baseUrl: string;   // Only used when reasoningProvider === 'custom'
+  providerConfigs: Record<ReasoningProvider, {
+    baseUrl: string;
+    apiKey: string;
+    modelName: string;
+  }>;
+  /** @deprecated Migrated to providerConfigs */
+  reasoningConfig?: {
+    baseUrl: string;
     apiKey: string;
     modelName: string;
   };

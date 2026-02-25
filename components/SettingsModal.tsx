@@ -52,20 +52,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
-      <div className={`w-full max-w-md max-h-[90vh] flex flex-col border rounded-xl shadow-2xl overflow-hidden transition-colors ${
-        isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-      }`}>
-        {/* Header */}
-        <div className={`px-4 sm:px-6 py-4 border-b flex justify-between items-center flex-shrink-0 ${
-          isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+      <div className={`w-full max-w-md max-h-[90vh] flex flex-col border rounded-xl shadow-2xl overflow-hidden transition-colors ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
         }`}>
+        {/* Header */}
+        <div className={`px-4 sm:px-6 py-4 border-b flex justify-between items-center flex-shrink-0 ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+          }`}>
           <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-zinc-900'}`}>Global Settings</h2>
-          <button 
+          <button
             type="button"
             onClick={onClose}
-            className={`min-h-[44px] min-w-[44px] flex items-center justify-center -m-2 transition-colors ${
-              isDark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-900'
-            }`}
+            className={`min-h-[44px] min-w-[44px] flex items-center justify-center -m-2 transition-colors ${isDark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-900'
+              }`}
             aria-label="Close settings"
           >
             <i className="fas fa-times"></i>
@@ -74,37 +71,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Body */}
         <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 overflow-y-auto flex-1 min-h-0">
-          
+
           {/* Theme Control */}
           <div>
             <label className={`block text-sm font-medium mb-3 ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
-                Interface Theme
+              Interface Theme
             </label>
             <div className="grid grid-cols-2 gap-3">
-                <button
-                    onClick={() => onUpdateSettings({ ...settings, theme: 'dark' })}
-                    className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium border transition-all ${
-                        settings.theme === 'dark'
-                            ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500'
-                            : isDark 
-                              ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'
-                              : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:border-zinc-300'
-                    }`}
-                >
-                    <i className="fas fa-moon mr-2"></i> Scientific Dark
-                </button>
-                <button
-                    onClick={() => onUpdateSettings({ ...settings, theme: 'light' })}
-                    className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium border transition-all ${
-                        settings.theme === 'light'
-                            ? 'bg-white text-zinc-900 border-orange-500 ring-1 ring-orange-500'
-                            : isDark
-                              ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'
-                              : 'bg-zinc-50 text-zinc-400 border-zinc-200 hover:border-zinc-300'
-                    }`}
-                >
-                    <i className="fas fa-sun mr-2"></i> Light
-                </button>
+              <button
+                onClick={() => onUpdateSettings({ ...settings, theme: 'dark' })}
+                className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium border transition-all ${settings.theme === 'dark'
+                    ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500'
+                    : isDark
+                      ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'
+                      : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:border-zinc-300'
+                  }`}
+              >
+                <i className="fas fa-moon mr-2"></i> Scientific Dark
+              </button>
+              <button
+                onClick={() => onUpdateSettings({ ...settings, theme: 'light' })}
+                className={`flex items-center justify-center px-4 py-3 rounded-lg text-sm font-medium border transition-all ${settings.theme === 'light'
+                    ? 'bg-white text-zinc-900 border-orange-500 ring-1 ring-orange-500'
+                    : isDark
+                      ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'
+                      : 'bg-zinc-50 text-zinc-400 border-zinc-200 hover:border-zinc-300'
+                  }`}
+              >
+                <i className="fas fa-sun mr-2"></i> Light
+              </button>
             </div>
           </div>
 
@@ -125,26 +120,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     key={p}
                     type="button"
                     onClick={() => {
-                      let newBaseUrl = settings.reasoningConfig?.baseUrl ?? '';
-                      if (['openai', 'gemini', 'anthropic', 'groq', 'together'].includes(p)) {
-                        newBaseUrl = '';
-                      } else if (p === 'k2') {
-                        newBaseUrl = 'https://api.k2think.ai/v1';
-                      } else if (p === 'custom') {
-                        newBaseUrl = '';
-                      }
                       onUpdateSettings({
                         ...settings,
                         reasoningProvider: p,
-                        reasoningConfig: {
-                          ...(settings.reasoningConfig ?? { apiKey: '', modelName: '' }),
-                          baseUrl: newBaseUrl
-                        },
                       });
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
-                      isActive ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500' : isDark ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:border-zinc-300'
-                    }`}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${isActive ? 'bg-zinc-800 text-white border-orange-500 ring-1 ring-orange-500' : isDark ? 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700' : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                      }`}
                   >
                     {label}
                   </button>
@@ -152,13 +134,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               })}
             </div>
             {(() => {
-              const provider = settings.reasoningProvider ?? (settings.modelProvider === 'gemini' ? 'gemini' : 'custom');
-              const config = settings.reasoningConfig ?? { baseUrl: '', apiKey: '', modelName: '' };
+              const provider = settings.reasoningProvider ?? 'gemini';
+              const config = settings.providerConfigs?.[provider] ?? { baseUrl: '', apiKey: '', modelName: '' };
               const meta = provider !== 'custom' ? REASONING_PROVIDERS[provider] : null;
               const isGemini = provider === 'gemini';
               const showBaseUrl = ['custom', 'k2'].includes(provider);
               const updateConfig = (partial: Partial<typeof config>) =>
-                onUpdateSettings({ ...settings, reasoningConfig: { ...config, ...partial } });
+                onUpdateSettings({
+                  ...settings,
+                  providerConfigs: {
+                    ...settings.providerConfigs,
+                    [provider]: { ...config, ...partial }
+                  }
+                });
               return (
                 <div className={`p-4 rounded-lg border space-y-3 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
                   {showBaseUrl && (
@@ -261,9 +249,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               step="0.1"
               value={settings.temperature}
               onChange={(e) => onUpdateSettings({ ...settings, temperature: parseFloat(e.target.value) })}
-              className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-orange-600 ${
-                isDark ? 'bg-zinc-800' : 'bg-zinc-200'
-              }`}
+              className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-orange-600 ${isDark ? 'bg-zinc-800' : 'bg-zinc-200'
+                }`}
             />
             <div className="flex justify-between mt-2 text-xs text-zinc-500">
               <span>Deterministic</span>
@@ -284,11 +271,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 toast.success("Settings saved.");
                 onClose();
               }}
-              className={`w-full py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
-                isDark
+              className={`w-full py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${isDark
                   ? 'bg-orange-600 text-white hover:bg-orange-700'
                   : 'bg-orange-600 text-white hover:bg-orange-700'
-              }`}
+                }`}
             >
               <i className="fas fa-check-circle"></i>
               Save settings
@@ -303,11 +289,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={handleClearClick}
-              className={`w-full py-2 px-4 border rounded-md transition-all text-sm font-medium flex items-center justify-center gap-2 ${
-                confirmDelete 
-                  ? 'bg-red-600 text-white border-red-600 hover:bg-red-700 animate-pulse' 
+              className={`w-full py-2 px-4 border rounded-md transition-all text-sm font-medium flex items-center justify-center gap-2 ${confirmDelete
+                  ? 'bg-red-600 text-white border-red-600 hover:bg-red-700 animate-pulse'
                   : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
-              }`}
+                }`}
             >
               <i className={`fas ${confirmDelete ? 'fa-exclamation-triangle' : 'fa-trash-alt'}`}></i>
               {confirmDelete ? "Click again to confirm deletion" : "Clear Research History"}

@@ -26,8 +26,16 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>({
     temperature: 0.7,
     theme: 'dark',
-    reasoningProvider: 'custom',
-    reasoningConfig: { baseUrl: '', apiKey: '', modelName: '' },
+    reasoningProvider: 'gemini',
+    providerConfigs: {
+      gemini: { apiKey: '', modelName: 'gemini-2.0-flash', baseUrl: '' },
+      k2: { apiKey: '', modelName: 'MBZUAI-IFM/K2-Think-v2', baseUrl: 'https://api.k2think.ai/v1' },
+      groq: { apiKey: '', modelName: 'llama-3.3-70b-versatile', baseUrl: '' },
+      openai: { apiKey: '', modelName: 'gpt-4o', baseUrl: '' },
+      anthropic: { apiKey: '', modelName: 'claude-3-5-sonnet-latest', baseUrl: '' },
+      together: { apiKey: '', modelName: '', baseUrl: 'https://api.together.xyz/v1' },
+      custom: { apiKey: '', modelName: '', baseUrl: '' },
+    },
   });
 
   // Restore session from Supabase or localStorage (with timeout so desktop never hangs)
@@ -59,15 +67,43 @@ export default function App() {
         if (storedSettings) {
           try {
             const parsed = JSON.parse(storedSettings);
-            const provider = parsed.reasoningProvider ?? (parsed.modelProvider === 'gemini' ? 'gemini' : 'custom');
-            const config = parsed.reasoningConfig ?? (provider === 'gemini'
-              ? { baseUrl: '', apiKey: parsed.geminiConfig?.apiKey ?? '', modelName: parsed.geminiConfig?.modelName ?? 'gemini-2.0-flash' }
-              : { baseUrl: parsed.customModelConfig?.baseUrl ?? '', apiKey: parsed.customModelConfig?.apiKey ?? '', modelName: parsed.customModelConfig?.modelName ?? '' });
+            let provider = parsed.reasoningProvider ?? (parsed.modelProvider === 'gemini' ? 'gemini' : 'custom');
+
+            // Default provider configurations
+            const defaultConfigs = {
+              gemini: { apiKey: '', modelName: 'gemini-2.0-flash', baseUrl: '' },
+              k2: { apiKey: '', modelName: 'MBZUAI-IFM/K2-Think-v2', baseUrl: 'https://api.k2think.ai/v1' },
+              groq: { apiKey: '', modelName: 'llama-3.3-70b-versatile', baseUrl: '' },
+              openai: { apiKey: '', modelName: 'gpt-4o', baseUrl: '' },
+              anthropic: { apiKey: '', modelName: 'claude-3-5-sonnet-latest', baseUrl: '' },
+              together: { apiKey: '', modelName: '', baseUrl: 'https://api.together.xyz/v1' },
+              custom: { apiKey: '', modelName: '', baseUrl: '' },
+            };
+
+            let providerConfigs = parsed.providerConfigs;
+
+            // Migration logic: If user hasn't migrated to providerConfigs yet
+            if (!providerConfigs) {
+              providerConfigs = { ...defaultConfigs };
+
+              // Move legacy config into the appropriate provider
+              const legacyConfig = parsed.reasoningConfig ?? (provider === 'gemini'
+                ? { baseUrl: '', apiKey: parsed.geminiConfig?.apiKey ?? '', modelName: parsed.geminiConfig?.modelName ?? 'gemini-2.0-flash' }
+                : { baseUrl: parsed.customModelConfig?.baseUrl ?? '', apiKey: parsed.customModelConfig?.apiKey ?? '', modelName: parsed.customModelConfig?.modelName ?? '' });
+
+              if (providerConfigs[provider]) {
+                providerConfigs[provider] = legacyConfig;
+              }
+            } else {
+              // Ensure all default keys exist in case new ones were added
+              providerConfigs = { ...defaultConfigs, ...providerConfigs };
+            }
+
             setSettings(prev => ({
               ...prev,
               ...parsed,
               reasoningProvider: provider,
-              reasoningConfig: config,
+              providerConfigs,
             }));
           } catch {
             /* ignore */
@@ -281,7 +317,7 @@ export default function App() {
           },
         }}
       />
-      
+
       {/* Mobile sidebar backdrop: tap outside to close */}
       {isSidebarOpen && (
         <div
@@ -290,9 +326,9 @@ export default function App() {
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-      <Sidebar 
-        user={user} 
-        sessions={sessions} 
+      <Sidebar
+        user={user}
+        sessions={sessions}
         currentSessionId={currentSessionId}
         onLogout={handleLogout}
         onSelectSession={handleSelectSession}
@@ -306,9 +342,8 @@ export default function App() {
       {/* Mobile: open sidebar when it's closed */}
       <button
         type="button"
-        className={`fixed z-20 flex items-center justify-center w-11 h-11 rounded-lg border shadow-md md:hidden transition-colors ${
-          isSidebarOpen ? 'invisible' : 'visible ' + (settings.theme === 'dark' ? 'bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-800 hover:bg-zinc-50')
-        }`}
+        className={`fixed z-20 flex items-center justify-center w-11 h-11 rounded-lg border shadow-md md:hidden transition-colors ${isSidebarOpen ? 'invisible' : 'visible ' + (settings.theme === 'dark' ? 'bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800' : 'bg-white border-zinc-200 text-zinc-800 hover:bg-zinc-50')
+          }`}
         style={{ top: 'max(1rem, env(safe-area-inset-top))', left: 'max(1rem, env(safe-area-inset-left))' }}
         onClick={() => setIsSidebarOpen(true)}
         aria-label="Open menu"
@@ -316,7 +351,7 @@ export default function App() {
         <i className="fas fa-bars text-lg" aria-hidden />
       </button>
 
-      <SettingsModal 
+      <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
@@ -326,7 +361,7 @@ export default function App() {
       />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <Workbench 
+        <Workbench
           key={currentSessionId || 'new'} // Force remount on session change
           initialSession={currentSession}
           onAnalysisComplete={handleNewSession}
