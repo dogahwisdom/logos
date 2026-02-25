@@ -2,7 +2,7 @@
 // Set GEMINI_API_KEY in Supabase Dashboard → Project Settings → Edge Functions → Secrets
 
 const MODEL = "gemini-2.0-flash";
-const PROMPT = `You are LOGOS, a senior scientific discovery agent. 
+const PROMPT = `You are LOGOS, a strict JSON API. You must respond ONLY with a valid JSON object. Do not include <think> tags, XML tags, conversational text, or markdown formatting outside of the JSON block.
 Analyze the following research paper text.
 
 Your task is to:
@@ -10,42 +10,20 @@ Your task is to:
 2. Identify 3 critical assumptions in the methodology that might be flawed or lack sufficient evidence.
 3. Perform a "Deep Reasoning" phase where you critique the experimental design, control variables, and statistical power step-by-step.
 4. Propose a Python script to validate the assumption.
-5. Generate a JSON dataset (list of x,y objects) that represents the *predicted* outcome of this experiment if the assumption is flawed. This data will be plotted on a chart.
+5. Generate a JSON dataset (list of x,y objects) that represents the *predicted* outcome of this experiment if the assumption is flawed. This data will be plotted on a chart. NEVER use ellipses (...) or placeholders in arrays. Generate the full, complete dataset.
 6. Assign a "Reproducibility Score" (0-100).
 7. Assess "Citation Integrity".
 
-Structure your response strictly using these XML-like tags:
-
-<summary>
-[Methodology Summary]
-</summary>
-
-<metrics>
-<reproducibility>[0-100]</reproducibility>
-<integrity>[High/Medium/Low]</integrity>
-</metrics>
-
-<reasoning>
-[Deep Reasoning]
-</reasoning>
-
-<assumptions>
-- [Assumption 1]
-- [Assumption 2]
-- [Assumption 3]
-</assumptions>
-
-<code>
-[Python Code]
-</code>
-
-<simulation_data>
-[
-  {"x": 0, "y": 0.1},
-  {"x": 1, "y": 0.5},
-  ...
-]
-</simulation_data>
+You must return exactly this JSON schema:
+{
+  "methodology_summary": "string",
+  "deep_reasoning": "string",
+  "critical_assumptions": ["string", "string", "string"],
+  "reproducibility_score": number,
+  "citation_integrity": "string",
+  "simulation_python_code": "string",
+  "simulation_data": [{"x": number, "y": number}]
+}
 
 Paper Text:
 `;
@@ -62,44 +40,38 @@ function corsHeaders(origin: string | null): Record<string, string> {
 
 function parseResponse(rawText: string) {
   const text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '');
-  const summaryMatch = text.match(/<summary>([\s\S]*?)<\/summary>/);
-  const reasoningMatch = text.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
-  const assumptionsMatch = text.match(/<assumptions>([\s\S]*?)<\/assumptions>/);
-  const codeMatch = text.match(/<code>([\s\S]*?)<\/code>/);
-  const reproMatch = text.match(/<reproducibility>([\s\S]*?)<\/reproducibility>/);
-  const integrityMatch = text.match(/<integrity>([\s\S]*?)<\/integrity>/);
-  const simMatch = text.match(/<simulation_data>([\s\S]*?)<\/simulation_data>/);
 
-  const summary = summaryMatch ? summaryMatch[1].trim() : "Could not extract summary.";
-  const reasoning = reasoningMatch ? reasoningMatch[1].trim() : "Could not extract reasoning.";
-  const reproducibilityScore = reproMatch ? parseInt(reproMatch[1].trim()) || 75 : 0;
-  const citationIntegrity = integrityMatch ? integrityMatch[1].trim() : "Unknown";
-
-  const assumptionsRaw = assumptionsMatch ? assumptionsMatch[1].trim() : "";
-  const assumptions = assumptionsRaw
-    .split("\n")
-    .map((line) => line.replace(/^-\s*/, "").trim())
-    .filter((line) => line.length > 0)
-    .slice(0, 3);
-
-  let experimentCode = codeMatch ? codeMatch[1].trim() : "# Could not generate code.";
-  experimentCode = experimentCode.replace(/```python/g, "").replace(/```/g, "");
-
-  let simulationData: { x: number; y: number }[] = [];
-  if (simMatch) {
-    try {
-      let jsonStr = simMatch[1].trim();
-      jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const startIdx = Math.max(0, jsonStr.search(/[[{]/));
-      const endIdx = Math.max(jsonStr.lastIndexOf(']'), jsonStr.lastIndexOf('}'));
-      if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
-        jsonStr = jsonStr.substring(startIdx, endIdx + 1);
-      }
-      simulationData = JSON.parse(jsonStr);
-    } catch {
-      throw new Error("Failed to parse analysis JSON. The model may have returned improperly formatted data.");
-    }
+  let jsonStr = text.trim();
+  if (jsonStr.startsWith('```')) {
+    jsonStr = jsonStr.replace(/^```(json)?/i, '').replace(/```$/i, '').trim();
   }
+
+  const startIdx = jsonStr.indexOf('{');
+  const endIdx = jsonStr.lastIndexOf('}');
+  if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
+    jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch (e) {
+    throw new Error("Failed to parse analysis JSON. The model generated invalid JSON.");
+  }
+
+  const summary = parsed.methodology_summary || 'Could not extract summary.';
+  const reasoning = parsed.deep_reasoning || 'Could not extract reasoning.';
+  const reproducibilityScore = typeof parsed.reproducibility_score === 'number' ? parsed.reproducibility_score : 75;
+  const citationIntegrity = parsed.citation_integrity || 'Unknown';
+
+  const assumptions = Array.isArray(parsed.critical_assumptions)
+    ? parsed.critical_assumptions.slice(0, 3)
+    : [];
+
+  let experimentCode = parsed.simulation_python_code || '# Could not generate code.';
+  experimentCode = experimentCode.replace(/```python/g, '').replace(/```/g, '');
+
+  const simulationData = Array.isArray(parsed.simulation_data) ? parsed.simulation_data : [];
 
   return {
     summary,

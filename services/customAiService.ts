@@ -36,7 +36,7 @@ export const analyzePaperWithCustomAI = async (
 ): Promise<AnalysisResult> => {
 
   const prompt = `
-    You are LOGOS, a senior scientific discovery agent. 
+    You are LOGOS, a strict JSON API. You must respond ONLY with a valid JSON object. Do not include <think> tags, XML tags, conversational text, or markdown formatting outside of the JSON block.
     Analyze the following research paper text.
     
     Your task is to:
@@ -44,42 +44,20 @@ export const analyzePaperWithCustomAI = async (
     2. Identify 3 critical assumptions in the methodology that might be flawed or lack sufficient evidence.
     3. Perform a "Deep Reasoning" phase where you critique the experimental design, control variables, and statistical power step-by-step.
     4. Propose a Python script to validate the assumption.
-    5. Generate a JSON dataset (list of x,y objects) that represents the *predicted* outcome of this experiment if the assumption is flawed. This data will be plotted on a chart.
+    5. Generate a JSON dataset (list of x,y objects) that represents the *predicted* outcome of this experiment if the assumption is flawed. This data will be plotted on a chart. NEVER use ellipses (...) or placeholders in arrays. Generate the full, complete dataset.
     6. Assign a "Reproducibility Score" (0-100).
     7. Assess "Citation Integrity".
 
-    Structure your response strictly using these XML-like tags:
-
-    <summary>
-    [Methodology Summary]
-    </summary>
-
-    <metrics>
-    <reproducibility>[0-100]</reproducibility>
-    <integrity>[High/Medium/Low]</integrity>
-    </metrics>
-
-    <reasoning>
-    [Deep Reasoning]
-    </reasoning>
-
-    <assumptions>
-    - [Assumption 1]
-    - [Assumption 2]
-    - [Assumption 3]
-    </assumptions>
-
-    <code>
-    [Python Code]
-    </code>
-
-    <simulation_data>
-    [
-      {"x": 0, "y": 0.1},
-      {"x": 1, "y": 0.5},
-      ...
-    ]
-    </simulation_data>
+    You must return exactly this JSON schema:
+    {
+      "methodology_summary": "string",
+      "deep_reasoning": "string",
+      "critical_assumptions": ["string", "string", "string"],
+      "reproducibility_score": number,
+      "citation_integrity": "string",
+      "simulation_python_code": "string",
+      "simulation_data": [{"x": number, "y": number}]
+    }
 
     Paper Text:
     ${paperText.slice(0, 30000)} 
