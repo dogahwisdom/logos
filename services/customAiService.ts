@@ -104,22 +104,27 @@ export const analyzePaperWithCustomAI = async (
       const startTag = "<FINAL_JSON>";
       const endTag = "</FINAL_JSON>";
 
-      const startIndex = text.indexOf(startTag);
-      const endIndex = text.indexOf(endTag);
+      const startIndex = text.lastIndexOf(startTag);
+      const endIndex = text.lastIndexOf(endTag);
 
-      if (startIndex !== -1 && endIndex !== -1) {
+      if (startIndex !== -1 && endIndex !== -1 && startIndex < endIndex) {
         // Extract everything between the tags
         let jsonString = text.substring(startIndex + startTag.length, endIndex).trim();
 
         // Safety check: strip markdown if it snuck inside the tags
         jsonString = jsonString.replace(/```json/gi, '').replace(/```/g, '').trim();
 
+        // Emergency sanitization: Delete literal ellipses so the parser doesn't choke
+        jsonString = jsonString.replace(/,\s*\.\.\./g, '').replace(/\.\.\./g, '');
+
         parsed = JSON.parse(jsonString);
       } else {
         // Fallback if the model forgot the tags (regex for the largest JSON block)
-        const jsonBlockMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-        if (jsonBlockMatch && jsonBlockMatch[1]) {
-          parsed = JSON.parse(jsonBlockMatch[1]);
+        const jsonBlockMatch = text.match(/\{[\s\S]*\}/g);
+        if (jsonBlockMatch && jsonBlockMatch.length > 0) {
+          let lastJson = jsonBlockMatch[jsonBlockMatch.length - 1];
+          lastJson = lastJson.replace(/,\s*\.\.\./g, '').replace(/\.\.\./g, '');
+          parsed = JSON.parse(lastJson);
         } else {
           throw new Error("Could not find <FINAL_JSON> tags or valid markdown block");
         }
