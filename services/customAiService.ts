@@ -30,11 +30,11 @@ function getAuthHeaders(baseUrl: string, apiKey: string): Record<string, string>
 }
 
 export const analyzePaperWithCustomAI = async (
-  paperText: string, 
+  paperText: string,
   config: CustomAIConfig,
   temperature: number = 0.7
 ): Promise<AnalysisResult> => {
-  
+
   const prompt = `
     You are LOGOS, a senior scientific discovery agent. 
     Analyze the following research paper text.
@@ -111,18 +111,22 @@ export const analyzePaperWithCustomAI = async (
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || "";
 
+    console.log("Raw API Response:", text);
+
+    const cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
     // Parse the XML-like tags (Same logic as Gemini service)
-    const summaryMatch = text.match(/<summary>([\s\S]*?)<\/summary>/);
-    const reasoningMatch = text.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
-    const assumptionsMatch = text.match(/<assumptions>([\s\S]*?)<\/assumptions>/);
-    const codeMatch = text.match(/<code>([\s\S]*?)<\/code>/);
-    
-    const reproMatch = text.match(/<reproducibility>([\s\S]*?)<\/reproducibility>/);
-    const integrityMatch = text.match(/<integrity>([\s\S]*?)<\/integrity>/);
+    const summaryMatch = cleanText.match(/<summary>([\s\S]*?)<\/summary>/);
+    const reasoningMatch = cleanText.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
+    const assumptionsMatch = cleanText.match(/<assumptions>([\s\S]*?)<\/assumptions>/);
+    const codeMatch = cleanText.match(/<code>([\s\S]*?)<\/code>/);
+
+    const reproMatch = cleanText.match(/<reproducibility>([\s\S]*?)<\/reproducibility>/);
+    const integrityMatch = cleanText.match(/<integrity>([\s\S]*?)<\/integrity>/);
 
     const summary = summaryMatch ? summaryMatch[1].trim() : "Could not extract summary.";
     const reasoning = reasoningMatch ? reasoningMatch[1].trim() : "Could not extract reasoning.";
-    
+
     const reproducibilityScore = reproMatch ? parseInt(reproMatch[1].trim()) || 75 : 0;
     const citationIntegrity = integrityMatch ? integrityMatch[1].trim() : "Unknown";
 
@@ -137,14 +141,22 @@ export const analyzePaperWithCustomAI = async (
     experimentCode = experimentCode.replace(/```python/g, '').replace(/```/g, '');
 
     // Parse Simulation Data
-    const simMatch = text.match(/<simulation_data>([\s\S]*?)<\/simulation_data>/);
+    const simMatch = cleanText.match(/<simulation_data>([\s\S]*?)<\/simulation_data>/);
     let simulationData = [];
-    try {
-      if (simMatch) {
-        simulationData = JSON.parse(simMatch[1].trim());
+    if (simMatch) {
+      try {
+        let jsonStr = simMatch[1].trim();
+        jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const startIdx = Math.max(0, jsonStr.search(/[[{]/));
+        const endIdx = Math.max(jsonStr.lastIndexOf(']'), jsonStr.lastIndexOf('}'));
+        if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
+          jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+        }
+        simulationData = JSON.parse(jsonStr);
+      } catch (e) {
+        console.warn("Failed to parse simulation data JSON", e);
+        throw new Error("Failed to parse analysis JSON. The model may have returned improperly formatted data.");
       }
-    } catch (e) {
-      console.warn("Failed to parse simulation data JSON", e);
     }
 
     return {

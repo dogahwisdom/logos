@@ -48,7 +48,8 @@ Structure your response strictly using these XML-like tags:
 Paper Text:
 `;
 
-function parseGeminiResponse(text: string): AnalysisResult {
+function parseGeminiResponse(rawText: string): AnalysisResult {
+  const text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '');
   const summaryMatch = text.match(/<summary>([\s\S]*?)<\/summary>/);
   const reasoningMatch = text.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
   const assumptionsMatch = text.match(/<assumptions>([\s\S]*?)<\/assumptions>/);
@@ -73,10 +74,19 @@ function parseGeminiResponse(text: string): AnalysisResult {
   experimentCode = experimentCode.replace(/```python/g, '').replace(/```/g, '');
 
   let simulationData: { x: number; y: number }[] = [];
-  try {
-    if (simMatch) simulationData = JSON.parse(simMatch[1].trim());
-  } catch {
-    // ignore
+  if (simMatch) {
+    try {
+      let jsonStr = simMatch[1].trim();
+      jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const startIdx = Math.max(0, jsonStr.search(/[[{]/));
+      const endIdx = Math.max(jsonStr.lastIndexOf(']'), jsonStr.lastIndexOf('}'));
+      if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
+        jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+      }
+      simulationData = JSON.parse(jsonStr);
+    } catch {
+      throw new Error("Failed to parse analysis JSON. The model may have returned improperly formatted data.");
+    }
   }
 
   return {
@@ -146,6 +156,9 @@ export async function analyzePaperWithGemini(
 
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+  console.log("Raw API Response:", text);
+
   if (!text) {
     throw new Error('No response text from Gemini. The model may have blocked the output.');
   }

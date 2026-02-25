@@ -60,7 +60,8 @@ function corsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-function parseResponse(text: string) {
+function parseResponse(rawText: string) {
+  const text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '');
   const summaryMatch = text.match(/<summary>([\s\S]*?)<\/summary>/);
   const reasoningMatch = text.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
   const assumptionsMatch = text.match(/<assumptions>([\s\S]*?)<\/assumptions>/);
@@ -85,10 +86,19 @@ function parseResponse(text: string) {
   experimentCode = experimentCode.replace(/```python/g, "").replace(/```/g, "");
 
   let simulationData: { x: number; y: number }[] = [];
-  try {
-    if (simMatch) simulationData = JSON.parse(simMatch[1].trim());
-  } catch {
-    // ignore
+  if (simMatch) {
+    try {
+      let jsonStr = simMatch[1].trim();
+      jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const startIdx = Math.max(0, jsonStr.search(/[[{]/));
+      const endIdx = Math.max(jsonStr.lastIndexOf(']'), jsonStr.lastIndexOf('}'));
+      if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
+        jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+      }
+      simulationData = JSON.parse(jsonStr);
+    } catch {
+      throw new Error("Failed to parse analysis JSON. The model may have returned improperly formatted data.");
+    }
   }
 
   return {
@@ -168,10 +178,20 @@ Deno.serve(async (req) => {
 
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const result = parseResponse(text);
 
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: corsHeaders(origin),
-  });
+  console.log("Raw API Response:", text);
+
+  try {
+    const result = parseResponse(text);
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: corsHeaders(origin),
+    });
+  } catch (error) {
+    console.error("Parse error:", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Parse error" }), {
+      status: 500,
+      headers: corsHeaders(origin),
+    });
+  }
 });
