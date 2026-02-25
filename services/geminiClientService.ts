@@ -27,23 +27,27 @@ Paper Text:
 `;
 
 function parseGeminiResponse(rawText: string): AnalysisResult {
-  const text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '');
-
-  let jsonStr = text.trim();
-  if (jsonStr.startsWith('```')) {
-    jsonStr = jsonStr.replace(/^```(json)?/i, '').replace(/```$/i, '').trim();
-  }
-
-  const startIdx = jsonStr.indexOf('{');
-  const endIdx = jsonStr.lastIndexOf('}');
-  if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
-    jsonStr = jsonStr.substring(startIdx, endIdx + 1);
-  }
-
   let parsed: any;
   try {
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
+    // 1. Remove <think> tags and their contents (critical for reasoning models)
+    let cleanText = rawText.replace(/<think>[\s\S]*?<\/think>/g, '');
+
+    // 2. Remove markdown formatting
+    cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '');
+
+    // 3. Extract the JSON object
+    const startIndex = cleanText.indexOf('{');
+    const endIndex = cleanText.lastIndexOf('}');
+
+    if (startIndex !== -1 && endIndex !== -1) {
+      const jsonString = cleanText.substring(startIndex, endIndex + 1);
+      parsed = JSON.parse(jsonString);
+    } else {
+      throw new Error("No JSON brackets found in response");
+    }
+  } catch (error) {
+    console.error("Failed to parse JSON:", error);
+    console.log("Raw Response was:", rawText);
     throw new Error("Failed to parse analysis JSON. The model generated invalid JSON.");
   }
 

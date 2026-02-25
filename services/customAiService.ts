@@ -91,51 +91,44 @@ export const analyzePaperWithCustomAI = async (
 
     console.log("Raw API Response:", text);
 
-    const cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
 
-    // Parse the XML-like tags (Same logic as Gemini service)
-    const summaryMatch = cleanText.match(/<summary>([\s\S]*?)<\/summary>/);
-    const reasoningMatch = cleanText.match(/<reasoning>([\s\S]*?)<\/reasoning>/);
-    const assumptionsMatch = cleanText.match(/<assumptions>([\s\S]*?)<\/assumptions>/);
-    const codeMatch = cleanText.match(/<code>([\s\S]*?)<\/code>/);
+    let parsed: any;
+    try {
+      // 1. Remove <think> tags and their contents (critical for reasoning models)
+      let cleanText = text.replace(/<think>[\s\S]*?<\/think>/g, '');
 
-    const reproMatch = cleanText.match(/<reproducibility>([\s\S]*?)<\/reproducibility>/);
-    const integrityMatch = cleanText.match(/<integrity>([\s\S]*?)<\/integrity>/);
+      // 2. Remove markdown formatting
+      cleanText = cleanText.replace(/```json/gi, '').replace(/```/g, '');
 
-    const summary = summaryMatch ? summaryMatch[1].trim() : "Could not extract summary.";
-    const reasoning = reasoningMatch ? reasoningMatch[1].trim() : "Could not extract reasoning.";
+      // 3. Extract the JSON object
+      const startIndex = cleanText.indexOf('{');
+      const endIndex = cleanText.lastIndexOf('}');
 
-    const reproducibilityScore = reproMatch ? parseInt(reproMatch[1].trim()) || 75 : 0;
-    const citationIntegrity = integrityMatch ? integrityMatch[1].trim() : "Unknown";
+      if (startIndex !== -1 && endIndex !== -1) {
+        const jsonString = cleanText.substring(startIndex, endIndex + 1);
+        parsed = JSON.parse(jsonString);
+      } else {
+        throw new Error("No JSON brackets found in response");
+      }
+    } catch (error) {
+      console.error("Failed to parse JSON:", error);
+      console.log("Raw Response was:", text);
+      throw new Error("Failed to parse analysis JSON. The model generated invalid JSON.");
+    }
 
-    const assumptionsRaw = assumptionsMatch ? assumptionsMatch[1].trim() : "";
-    const assumptions = assumptionsRaw
-      .split('\n')
-      .map(line => line.replace(/^-\s*/, '').trim())
-      .filter(line => line.length > 0)
-      .slice(0, 3);
+    const summary = parsed.methodology_summary || 'Could not extract summary.';
+    const reasoning = parsed.deep_reasoning || 'Could not extract reasoning.';
+    const reproducibilityScore = typeof parsed.reproducibility_score === 'number' ? parsed.reproducibility_score : 75;
+    const citationIntegrity = parsed.citation_integrity || 'Unknown';
 
-    let experimentCode = codeMatch ? codeMatch[1].trim() : "# Could not generate code.";
+    const assumptions = Array.isArray(parsed.critical_assumptions)
+      ? parsed.critical_assumptions.slice(0, 3)
+      : [];
+
+    let experimentCode = parsed.simulation_python_code || '# Could not generate code.';
     experimentCode = experimentCode.replace(/```python/g, '').replace(/```/g, '');
 
-    // Parse Simulation Data
-    const simMatch = cleanText.match(/<simulation_data>([\s\S]*?)<\/simulation_data>/);
-    let simulationData = [];
-    if (simMatch) {
-      try {
-        let jsonStr = simMatch[1].trim();
-        jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const startIdx = Math.max(0, jsonStr.search(/[[{]/));
-        const endIdx = Math.max(jsonStr.lastIndexOf(']'), jsonStr.lastIndexOf('}'));
-        if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
-          jsonStr = jsonStr.substring(startIdx, endIdx + 1);
-        }
-        simulationData = JSON.parse(jsonStr);
-      } catch (e) {
-        console.warn("Failed to parse simulation data JSON", e);
-        throw new Error("Failed to parse analysis JSON. The model may have returned improperly formatted data.");
-      }
-    }
+    const simulationData = Array.isArray(parsed.simulation_data) ? parsed.simulation_data : [];
 
     return {
       summary,
